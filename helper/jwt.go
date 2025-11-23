@@ -1,162 +1,95 @@
 package helper
 
 import (
+    "os"
+    "time"
 	"fmt"
-	"os"
-	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"go-fiber/app/model"
+    "github.com/golang-jwt/jwt/v5"
+    "go-fiber/app/model"
 )
 
-// GenerateAccessToken membuat JWT access token
-func GenerateAccessToken(user *model.User, permissions []string) (string, error) {
-	secret := os.Getenv("JWT_SECRET")
-	expiresIn := os.Getenv("JWT_EXPIRES_IN")
+func GenerateAccessToken(user *model.User, perms []string) (string, error) {
+    secret := os.Getenv("JWT_SECRET")
 
-	// Parse duration (default 24 jam)
-	duration, err := time.ParseDuration(expiresIn)
-	if err != nil || duration <= 0 {
-		duration = 24 * time.Hour
-	}
+    claims := jwt.MapClaims{
+        "userId":      user.ID,
+        "username":    user.Username,
+        "role":        user.RoleName,
+        "permissions": perms,
+        "type":        "access",
+        "exp":         time.Now().Add(1 * time.Hour).Unix(),
+    }
 
-	// Buat claims
-	claims := jwt.MapClaims{
-		"userId":      user.ID,
-		"username":    user.Username,
-		"role":        user.RoleName,
-		"permissions": permissions,
-		"type":        "access",
-		"exp":         time.Now().Add(duration).Unix(),
-		"iat":         time.Now().Unix(),
-	}
-
-	// Generate token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(secret))
-	if err != nil {
-		return "", err
-	}
-
-	return tokenString, nil
+    return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).
+        SignedString([]byte(secret))
 }
 
-// GenerateRefreshToken membuat JWT refresh token
 func GenerateRefreshToken(userID string) (string, error) {
-	secret := os.Getenv("JWT_REFRESH_SECRET")
-	expiresIn := os.Getenv("JWT_REFRESH_EXPIRES_IN")
+    secret := os.Getenv("JWT_SECRET")
 
-	// Parse duration (default 7 hari)
-	duration, err := time.ParseDuration(expiresIn)
-	if err != nil || duration <= 0 {
-		duration = 168 * time.Hour // 7 hari
-	}
+    claims := jwt.MapClaims{
+        "userId": userID,
+        "type":   "refresh",
+        "exp":    time.Now().Add(7 * 24 * time.Hour).Unix(),
+    }
 
-	// Buat claims
-	claims := jwt.MapClaims{
-		"userId": userID,
-		"type":   "refresh",
-		"exp":    time.Now().Add(duration).Unix(),
-		"iat":    time.Now().Unix(),
-	}
-
-	// Generate token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(secret))
-	if err != nil {
-		return "", err
-	}
-
-	return tokenString, nil
+    return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).
+        SignedString([]byte(secret))
 }
 
-// ValidateAccessToken memvalidasi access token
-func ValidateAccessToken(tokenString string) (*model.JWTClaims, error) {
-	secret := os.Getenv("JWT_SECRET")
+func ValidateRefreshToken(tokenStr string) (string, error) {
+    secret := os.Getenv("JWT_SECRET")
 
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// Validasi signing method
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(secret), nil
-	})
-	if err != nil {
-		return nil, err
-	}
+    token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+        return []byte(secret), nil
+    })
 
-	if !token.Valid {
-		return nil, fmt.Errorf("invalid token")
-	}
+    if err != nil || !token.Valid {
+        return "", err
+    }
 
-	// Extract claims
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return nil, fmt.Errorf("invalid token claims")
-	}
-
-	// Validasi tipe token
-	if claims["type"] != "access" {
-		return nil, fmt.Errorf("invalid token type")
-	}
-
-	// Convert permissions
-	permissions := []string{}
-	if perms, ok := claims["permissions"].([]interface{}); ok {
-		for _, p := range perms {
-			if perm, ok := p.(string); ok {
-				permissions = append(permissions, perm)
-			}
-		}
-	}
-
-	// safe type assertions
-	userId, _ := claims["userId"].(string)
-	username, _ := claims["username"].(string)
-	role, _ := claims["role"].(string)
-	tType, _ := claims["type"].(string)
-
-	return &model.JWTClaims{
-		UserID:      userId,
-		Username:    username,
-		Role:        role,
-		Permissions: permissions,
-		Type:        tType,
-	}, nil
+    claims := token.Claims.(jwt.MapClaims)
+    return claims["userId"].(string), nil
 }
 
-// ValidateRefreshToken memvalidasi refresh token dan mengembalikan userId
-func ValidateRefreshToken(tokenString string) (string, error) {
-	secret := os.Getenv("JWT_REFRESH_SECRET")
+func ValidateAccessToken(tokenStr string) (*model.JWTClaims, error) {
+    secret := os.Getenv("JWT_SECRET")
 
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(secret), nil
-	})
-	if err != nil {
-		return "", err
-	}
+    // Parse token
+    token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+        return []byte(secret), nil
+    })
 
-	if !token.Valid {
-		return "", fmt.Errorf("invalid token")
-	}
+    if err != nil || !token.Valid {
+        return nil, err
+    }
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return "", fmt.Errorf("invalid token claims")
-	}
+    claims, ok := token.Claims.(jwt.MapClaims)
+    if !ok {
+        return nil, fmt.Errorf("invalid claims")
+    }
 
-	// Validasi tipe token
-	if claims["type"] != "refresh" {
-		return "", fmt.Errorf("invalid token type")
-	}
+    // Validasi bahwa token adalah access token
+    if claims["type"] != "access" {
+        return nil, fmt.Errorf("invalid token type")
+    }
 
-	userId, ok := claims["userId"].(string)
-	if !ok || userId == "" {
-		return "", fmt.Errorf("invalid user id in token")
-	}
+    // Build JWTClaims struct
+    permissions := []string{}
+    if perms, ok := claims["permissions"].([]interface{}); ok {
+        for _, p := range perms {
+            if str, ok := p.(string); ok {
+                permissions = append(permissions, str)
+            }
+        }
+    }
 
-	return userId, nil
+    return &model.JWTClaims{
+        UserID:      claims["userId"].(string),
+        Username:    claims["username"].(string),
+        Role:        claims["role"].(string),
+        Permissions: permissions,
+        Type:        "access",
+    }, nil
 }

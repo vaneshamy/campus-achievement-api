@@ -1,35 +1,17 @@
 package helper
 
-import (
-	"strings"
+import "go-fiber/app/model"
 
-	"go-fiber/app/model"
-)
+func ValidateLoginRequest(req *model.LoginRequest) []string {
+    var errs []string
 
-// ValidateLoginRequest memvalidasi login request
-func ValidateLoginRequest(req *model.LoginRequest) []model.ValidationError {
-	errors := []model.ValidationError{}
+    if req.Username == "" {
+        errs = append(errs, "username required")
+    }
 
-	// Validasi username
-	if strings.TrimSpace(req.Username) == "" {
-		errors = append(errors, model.ValidationError{
-			Field:   "username",
-			Message: "Username is required",
-		})
-	}
+    if req.Password == "" {
+        errs = append(errs, "password required")
+    }
 
-	// Validasi password
-	if strings.TrimSpace(req.Password) == "" {
-		errors = append(errors, model.ValidationError{
-			Field:   "password",
-			Message: "Password is required",
-		})
-	} else if len(req.Password) < 6 {
-		errors = append(errors, model.ValidationError{
-			Field:   "password",
-			Message: "Password must be at least 6 characters",
-		})
-	}
-
-	return errors
+    return errs
 }
