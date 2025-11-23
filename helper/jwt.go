@@ -16,7 +16,7 @@ func GenerateAccessToken(user *model.User, permissions []string) (string, error)
 
 	// Parse duration (default 24 jam)
 	duration, err := time.ParseDuration(expiresIn)
-	if err != nil {
+	if err != nil || duration <= 0 {
 		duration = 24 * time.Hour
 	}
 
@@ -48,7 +48,7 @@ func GenerateRefreshToken(userID string) (string, error) {
 
 	// Parse duration (default 7 hari)
 	duration, err := time.ParseDuration(expiresIn)
-	if err != nil {
+	if err != nil || duration <= 0 {
 		duration = 168 * time.Hour // 7 hari
 	}
 
@@ -81,7 +81,6 @@ func ValidateAccessToken(tokenString string) (*model.JWTClaims, error) {
 		}
 		return []byte(secret), nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -111,16 +110,22 @@ func ValidateAccessToken(tokenString string) (*model.JWTClaims, error) {
 		}
 	}
 
+	// safe type assertions
+	userId, _ := claims["userId"].(string)
+	username, _ := claims["username"].(string)
+	role, _ := claims["role"].(string)
+	tType, _ := claims["type"].(string)
+
 	return &model.JWTClaims{
-		UserID:      claims["userId"].(string),
-		Username:    claims["username"].(string),
-		Role:        claims["role"].(string),
+		UserID:      userId,
+		Username:    username,
+		Role:        role,
 		Permissions: permissions,
-		Type:        claims["type"].(string),
+		Type:        tType,
 	}, nil
 }
 
-// ValidateRefreshToken memvalidasi refresh token
+// ValidateRefreshToken memvalidasi refresh token dan mengembalikan userId
 func ValidateRefreshToken(tokenString string) (string, error) {
 	secret := os.Getenv("JWT_REFRESH_SECRET")
 
@@ -130,7 +135,6 @@ func ValidateRefreshToken(tokenString string) (string, error) {
 		}
 		return []byte(secret), nil
 	})
-
 	if err != nil {
 		return "", err
 	}
@@ -149,5 +153,10 @@ func ValidateRefreshToken(tokenString string) (string, error) {
 		return "", fmt.Errorf("invalid token type")
 	}
 
-	return claims["userId"].(string), nil
+	userId, ok := claims["userId"].(string)
+	if !ok || userId == "" {
+		return "", fmt.Errorf("invalid user id in token")
+	}
+
+	return userId, nil
 }

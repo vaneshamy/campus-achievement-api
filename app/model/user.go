@@ -36,11 +36,10 @@ type Permission struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
-// RefreshToken model untuk tabel refresh_tokens
-type RefreshToken struct {
-	ID        string    `json:"id"`
-	UserID    string    `json:"userId"`
-	Token     string    `json:"token"`
-	ExpiresAt time.Time `json:"expiresAt"`
-	CreatedAt time.Time `json:"createdAt"`
+type UserResponse struct {
+	ID          string   `json:"id"`
+	Username    string   `json:"username"`
+	FullName    string   `json:"fullName"`
+	Role        string   `json:"role"`
+	Permissions []string `json:"permissions"`
 }

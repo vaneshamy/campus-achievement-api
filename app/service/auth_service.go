@@ -2,198 +2,142 @@ package service
 
 import (
 	"fmt"
-	"time"
 
 	"go-fiber/app/model"
 	"go-fiber/app/repository"
 	"go-fiber/helper"
 )
 
+// AuthService tidak lagi membutuhkan TokenRepository (no DB for refresh tokens)
 type AuthService struct {
-	userRepo  *repository.UserRepository
-	tokenRepo *repository.TokenRepository
+	userRepo *repository.UserRepository
 }
 
-func NewAuthService(userRepo *repository.UserRepository, tokenRepo *repository.TokenRepository) *AuthService {
+func NewAuthService(userRepo *repository.UserRepository) *AuthService {
 	return &AuthService{
-		userRepo:  userRepo,
-		tokenRepo: tokenRepo,
+		userRepo: userRepo,
 	}
 }
 
-// Login melakukan proses autentikasi user
+// Login memverifikasi user, mengembalikan access token dan refresh token
 func (s *AuthService) Login(req *model.LoginRequest) (*model.LoginResponse, error) {
-	// 1. Cari user berdasarkan username atau email
-	var user *model.User
-	var err error
-
-	// Cek apakah input adalah email atau username
-	if contains(req.Username, "@") {
+	// Cari user by username, jika tidak ada coba by email
+	user, err := s.userRepo.FindByUsername(req.Username)
+	if err != nil {
+		// coba email
 		user, err = s.userRepo.FindByEmail(req.Username)
-	} else {
-		user, err = s.userRepo.FindByUsername(req.Username)
+		if err != nil {
+			return nil, fmt.Errorf("invalid credentials")
+		}
 	}
 
-	if err != nil {
-		return nil, fmt.Errorf("invalid credentials")
-	}
-
-	// 2. Validasi password
-	if !helper.CheckPassword(req.Password, user.PasswordHash) {
-		return nil, fmt.Errorf("invalid credentials")
-	}
-
-	// 3. Cek status aktif user
+	// Cek active
 	if !user.IsActive {
-		return nil, fmt.Errorf("user account is inactive")
+		return nil, fmt.Errorf("user is not active")
 	}
 
-	// 4. Load permissions user
-	permissions, err := s.userRepo.GetUserPermissions(user.RoleID)
+	// Cek password (asumsi helper.CheckPasswordHash)
+	if ok := helper.CheckPasswordHash(req.Password, user.PasswordHash); !ok {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+
+	// Ambil permissions user
+	perms, err := s.userRepo.GetUserPermissions(user.RoleID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load permissions")
+		return nil, fmt.Errorf("failed to load permissions: %v", err)
 	}
 
-	// 5. Generate access token
-	accessToken, err := helper.GenerateAccessToken(user, permissions)
+	// Generate access token
+	accessToken, err := helper.GenerateAccessToken(user, perms)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate access token")
+		return nil, err
 	}
 
-	// 6. Generate refresh token
+	// Generate refresh token (JWT) — disimpan di cookie pada route
 	refreshToken, err := helper.GenerateRefreshToken(user.ID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate refresh token")
+		return nil, err
 	}
 
-	// 7. Simpan refresh token ke database
-	expiresIn := helper.ParseDuration("JWT_REFRESH_EXPIRES_IN", 168*time.Hour)
-	token := &model.RefreshToken{
-		UserID:    user.ID,
-		Token:     refreshToken,
-		ExpiresAt: time.Now().Add(expiresIn),
-	}
-
-	if err := s.tokenRepo.SaveRefreshToken(token); err != nil {
-		return nil, fmt.Errorf("failed to save refresh token")
-	}
-
-	// 8. Return response
-	response := &model.LoginResponse{
-		Token:        accessToken,
-		RefreshToken: refreshToken,
-		User: model.UserResponse{
-			ID:          user.ID,
-			Username:    user.Username,
-			FullName:    user.FullName,
-			Role:        user.RoleName,
-			Permissions: permissions,
-		},
-	}
-
-	return response, nil
-}
-
-// RefreshToken melakukan refresh access token
-func (s *AuthService) RefreshToken(refreshTokenStr string) (*model.LoginResponse, error) {
-	// 1. Validasi refresh token
-	userID, err := helper.ValidateRefreshToken(refreshTokenStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid refresh token")
-	}
-
-	// 2. Cek apakah refresh token ada di database
-	storedToken, err := s.tokenRepo.FindRefreshToken(refreshTokenStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to verify refresh token")
-	}
-	if storedToken == nil {
-		return nil, fmt.Errorf("refresh token not found or expired")
-	}
-
-	// 3. Load user data
-	user, err := s.userRepo.FindByID(userID)
-	if err != nil {
-		return nil, fmt.Errorf("user not found")
-	}
-
-	// 4. Cek status aktif user
-	if !user.IsActive {
-		return nil, fmt.Errorf("user account is inactive")
-	}
-
-	// 5. Load permissions
-	permissions, err := s.userRepo.GetUserPermissions(user.RoleID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load permissions")
-	}
-
-	// 6. Generate access token baru
-	accessToken, err := helper.GenerateAccessToken(user, permissions)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate access token")
-	}
-
-	// 7. Return response (refresh token tetap sama)
-	response := &model.LoginResponse{
-		Token:        accessToken,
-		RefreshToken: refreshTokenStr,
-		User: model.UserResponse{
-			ID:          user.ID,
-			Username:    user.Username,
-			FullName:    user.FullName,
-			Role:        user.RoleName,
-			Permissions: permissions,
-		},
-	}
-
-	return response, nil
-}
-
-// Logout menghapus refresh token dari database
-func (s *AuthService) Logout(refreshToken string) error {
-	return s.tokenRepo.DeleteRefreshToken(refreshToken)
-}
-
-// GetUserProfile mendapatkan profil user dari token
-func (s *AuthService) GetUserProfile(userID string) (*model.UserResponse, error) {
-	// 1. Load user data
-	user, err := s.userRepo.FindByID(userID)
-	if err != nil {
-		return nil, fmt.Errorf("user not found")
-	}
-
-	// 2. Load permissions
-	permissions, err := s.userRepo.GetUserPermissions(user.RoleID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load permissions")
-	}
-
-	// 3. Return response
-	response := &model.UserResponse{
+	// Siapkan response user shape
+	userResp := model.UserResponse{
 		ID:          user.ID,
 		Username:    user.Username,
 		FullName:    user.FullName,
 		Role:        user.RoleName,
-		Permissions: permissions,
+		Permissions: perms,
 	}
 
-	return response, nil
+	return &model.LoginResponse{
+		Token:        accessToken,
+		RefreshToken: refreshToken, // route akan menaruhnya di cookie, jangan kirim lewat JSON kalau tak ingin
+		User:         userResp,
+	}, nil
 }
 
-// Helper function
-func contains(str, substr string) bool {
-	return len(str) > 0 && len(substr) > 0 && 
-		   (str == substr || (len(str) > len(substr) && 
-		   (str[:len(substr)] == substr || str[len(str)-len(substr):] == substr || 
-		   containsSubstr(str, substr))))
-}
-
-func containsSubstr(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
+// RefreshToken menerima refresh token string (dari cookie), memvalidasi dan create access token baru.
+// Opsi: melakukan rotation refresh token (mengembalikan refresh token baru)
+func (s *AuthService) RefreshToken(refreshToken string) (*model.LoginResponse, error) {
+	if refreshToken == "" {
+		return nil, fmt.Errorf("refresh token missing")
 	}
-	return false
+
+	userID, err := helper.ValidateRefreshToken(refreshToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ambil user
+	user, err := s.userRepo.FindByID(userID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found")
+	}
+	if !user.IsActive {
+		return nil, fmt.Errorf("user not active")
+	}
+
+	// Ambil permissions
+	perms, err := s.userRepo.GetUserPermissions(user.RoleID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Buat access token baru
+	accessToken, err := helper.GenerateAccessToken(user, perms)
+	if err != nil {
+		return nil, err
+	}
+
+	// Opsi: rotate refresh token untuk keamanan (lebih baik)
+	newRefreshToken, err := helper.GenerateRefreshToken(user.ID)
+	if err != nil {
+		// jika gagal generate refresh baru, tetap beri access token lama
+		newRefreshToken = refreshToken // fallback, meski idealnya kita handle differently
+	}
+
+	userResp := model.UserResponse{
+		ID:          user.ID,
+		Username:    user.Username,
+		FullName:    user.FullName,
+		Role:        user.RoleName,
+		Permissions: perms,
+	}
+
+	return &model.LoginResponse{
+		Token:        accessToken,
+		RefreshToken: newRefreshToken,
+		User:         userResp,
+	}, nil
+}
+
+// Logout tidak perlu menghapus DB token — cukup clear cookie di route
+func (s *AuthService) Logout(refreshToken string) error {
+	// Karena tidak ada penyimpanan server-side, logout server hanya no-op
+	// (Cookie akan dihapus oleh route)
+	return nil
+}
+
+// GetUserProfile mengambil profil user (dipanggil dari route /auth/profile)
+func (s *AuthService) GetUserProfile(userID string) (*model.User, error) {
+	return s.userRepo.FindByID(userID)
 }

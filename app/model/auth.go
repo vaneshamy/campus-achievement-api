@@ -13,15 +13,6 @@ type LoginResponse struct {
 	User         UserResponse `json:"user"`
 }
 
-// UserResponse DTO untuk user data di response
-type UserResponse struct {
-	ID          string   `json:"id"`
-	Username    string   `json:"username"`
-	FullName    string   `json:"fullName"`
-	Role        string   `json:"role"`
-	Permissions []string `json:"permissions"`
-}
-
 // RefreshTokenRequest DTO untuk refresh token request
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refreshToken" validate:"required"`
@@ -35,3 +26,34 @@ type JWTClaims struct {
 	Permissions []string `json:"permissions"`
 	Type        string   `json:"type"` // "access" atau "refresh"
 }
+
+type APIResponse struct {
+	Status  string      `json:"status"`
+	Message string      `json:"message,omitempty"`
+	Data    interface{} `json:"data,omitempty"`
+	Error   interface{} `json:"error,omitempty"`
+}
+
+// ValidationError untuk error validasi
+type ValidationError struct {
+	Field   string `json:"field"`
+	Message string `json:"message"`
+}
+
+// SuccessResponse helper untuk response sukses
+func SuccessResponse(data interface{}) APIResponse {
+	return APIResponse{
+		Status: "success",
+		Data:   data,
+	}
+}
+
+// ErrorResponse helper untuk response error
+func ErrorResponse(message string, err interface{}) APIResponse {
+	return APIResponse{
+		Status:  "error",
+		Message: message,
+		Error:   err,
+	}
+}
+

@@ -26,10 +26,10 @@ func NewApp(db *sql.DB) *fiber.App {
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
-	tokenRepo := repository.NewTokenRepository(db)
+	// tokenRepo dihapus, tidak digunakan
 
 	// Initialize services
-	authService := service.NewAuthService(userRepo, tokenRepo)
+	authService := service.NewAuthService(userRepo)
 
 	// Setup routes
 	api := app.Group("/api/v1")

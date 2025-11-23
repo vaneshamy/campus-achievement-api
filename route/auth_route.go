@@ -1,6 +1,8 @@
 package route
 
 import (
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"go-fiber/app/model"
 	"go-fiber/app/service"
@@ -31,7 +33,7 @@ func SetupAuthRoutes(app fiber.Router, authService *service.AuthService) {
 			))
 		}
 
-		// 3. Proses login
+		// 3. Proses login via service
 		response, err := authService.Login(&req)
 		if err != nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(model.ErrorResponse(
@@ -40,74 +42,109 @@ func SetupAuthRoutes(app fiber.Router, authService *service.AuthService) {
 			))
 		}
 
-		// 4. Return response sukses
+		// 4. Simpan refresh token di HTTPOnly cookie
+		refreshCookie := &fiber.Cookie{
+			Name:     "refreshToken",
+			Value:    response.RefreshToken,
+			HTTPOnly: true,
+			Secure:   true,
+			SameSite: "Strict",
+			Path:     "/",
+		}
+
+		// Set expiry sesuai ENV (default 7 hari)
+		if dur, err := time.ParseDuration(helper.GetEnvOrDefault("JWT_REFRESH_EXPIRES_IN", "168h")); err == nil {
+			refreshCookie.Expires = time.Now().Add(dur)
+		} else {
+			refreshCookie.Expires = time.Now().Add(7 * 24 * time.Hour)
+		}
+
+		c.Cookie(refreshCookie)
+
+		// 5. Return response (refresh token ikut dikirim)
 		return c.Status(fiber.StatusOK).JSON(model.SuccessResponse(response))
 	})
 
-	// POST /api/v1/auth/refresh - Refresh token endpoint
+	// POST /api/v1/auth/refresh - Refresh access token
 	auth.Post("/refresh", func(c *fiber.Ctx) error {
-		// 1. Parse request body
-		var req model.RefreshTokenRequest
-		if err := c.BodyParser(&req); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(model.ErrorResponse(
-				"Invalid request body",
-				err.Error(),
-			))
-		}
-
-		// 2. Validasi input
-		if req.RefreshToken == "" {
-			return c.Status(fiber.StatusUnprocessableEntity).JSON(model.ErrorResponse(
-				"Refresh token is required",
+		// Ambil refresh token dari cookie
+		refreshToken := c.Cookies("refreshToken")
+		if refreshToken == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(model.ErrorResponse(
+				"Refresh token missing",
 				nil,
 			))
 		}
 
-		// 3. Proses refresh token
-		response, err := authService.RefreshToken(req.RefreshToken)
+		response, err := authService.RefreshToken(refreshToken)
 		if err != nil {
+			// Invalid -> hapus cookie
+			c.Cookie(&fiber.Cookie{
+				Name:     "refreshToken",
+				Value:    "",
+				Expires:  time.Now().Add(-time.Hour),
+				HTTPOnly: true,
+				Secure:   true,
+				SameSite: "Strict",
+				Path:     "/",
+			})
+
 			return c.Status(fiber.StatusUnauthorized).JSON(model.ErrorResponse(
 				err.Error(),
 				nil,
 			))
 		}
 
-		// 4. Return response sukses
+		// Rotasi refresh token baru (jika ada)
+		if response.RefreshToken != "" {
+			newCookie := &fiber.Cookie{
+				Name:     "refreshToken",
+				Value:    response.RefreshToken,
+				HTTPOnly: true,
+				Secure:   true,
+				SameSite: "Strict",
+				Path:     "/",
+			}
+
+			if dur, err := time.ParseDuration(helper.GetEnvOrDefault("JWT_REFRESH_EXPIRES_IN", "168h")); err == nil {
+				newCookie.Expires = time.Now().Add(dur)
+			} else {
+				newCookie.Expires = time.Now().Add(7 * 24 * time.Hour)
+			}
+
+			c.Cookie(newCookie)
+		}
+
+		// Return response lengkap (token + refresh token)
 		return c.Status(fiber.StatusOK).JSON(model.SuccessResponse(response))
 	})
 
-	// POST /api/v1/auth/logout - Logout endpoint (Protected)
+	// POST /api/v1/auth/logout - Logout endpoint
 	auth.Post("/logout", middleware.AuthMiddleware(), func(c *fiber.Ctx) error {
-		// 1. Parse request body
-		var req model.RefreshTokenRequest
-		if err := c.BodyParser(&req); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(model.ErrorResponse(
-				"Invalid request body",
-				err.Error(),
-			))
-		}
+		// Clear cookie
+		c.Cookie(&fiber.Cookie{
+			Name:     "refreshToken",
+			Value:    "",
+			Expires:  time.Now().Add(-time.Hour),
+			HTTPOnly: true,
+			Secure:   true,
+			SameSite: "Strict",
+			Path:     "/",
+		})
 
-		// 2. Proses logout (hapus refresh token)
-		if err := authService.Logout(req.RefreshToken); err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(model.ErrorResponse(
-				"Failed to logout",
-				err.Error(),
-			))
-		}
+		// Tetap panggil service agar kontrak terjaga
+		_ = authService.Logout("")
 
-		// 3. Return response sukses
 		return c.Status(fiber.StatusOK).JSON(model.SuccessResponse(map[string]string{
 			"message": "Logged out successfully",
 		}))
 	})
 
-	// GET /api/v1/auth/profile - Get user profile endpoint (Protected)
+	// GET /api/v1/auth/profile - Profil user (Protected)
 	auth.Get("/profile", middleware.AuthMiddleware(), func(c *fiber.Ctx) error {
-		// 1. Ambil user dari context
-		user := c.Locals("user").(*model.JWTClaims)
+		userClaims := c.Locals("user").(*model.JWTClaims)
 
-		// 2. Get user profile
-		profile, err := authService.GetUserProfile(user.UserID)
+		profile, err := authService.GetUserProfile(userClaims.UserID)
 		if err != nil {
 			return c.Status(fiber.StatusNotFound).JSON(model.ErrorResponse(
 				err.Error(),
@@ -115,7 +152,6 @@ func SetupAuthRoutes(app fiber.Router, authService *service.AuthService) {
 			))
 		}
 
-		// 3. Return response sukses
 		return c.Status(fiber.StatusOK).JSON(model.SuccessResponse(profile))
 	})
 }
