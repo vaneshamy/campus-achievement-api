@@ -30,6 +30,8 @@ func NewApp(db *sql.DB) *fiber.App {
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo)
+	userService := service.NewUserService(userRepo)
+
 
 	// Setup routes
 	api := app.Group("/api/v1")
@@ -48,6 +50,7 @@ func NewApp(db *sql.DB) *fiber.App {
 	// Register route groups
 	route.SetupAuthRoutes(api, authService)
 	route.SetupAchievementRoutes(api) // Contoh protected routes
+	route.SetupUserRoutes(api, userService)
 
 	// 404 handler
 	app.Use(func(c *fiber.Ctx) error {
