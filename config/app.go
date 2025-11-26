@@ -26,11 +26,15 @@ func NewApp(db *sql.DB) *fiber.App {
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
+	studentRepo := repository.NewStudentRepository(db)
+	lecturerRepo := repository.NewLecturerRepository(db)
 	// tokenRepo dihapus, tidak digunakan
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo)
 	userService := service.NewUserService(userRepo)
+	studentService := service.NewStudentService(studentRepo) 
+	lecturerService := service.NewLecturerService(lecturerRepo)
 
 
 	// Setup routes
@@ -51,6 +55,8 @@ func NewApp(db *sql.DB) *fiber.App {
 	route.SetupAuthRoutes(api, authService)
 	route.SetupAchievementRoutes(api) // Contoh protected routes
 	route.SetupUserRoutes(api, userService)
+	route.SetupStudentRoutes(api, studentService)
+	route.SetupLecturerRoutes(api, lecturerService)
 
 	// 404 handler
 	app.Use(func(c *fiber.Ctx) error {
