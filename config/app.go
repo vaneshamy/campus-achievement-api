@@ -32,7 +32,7 @@ func NewApp(db *sql.DB) *fiber.App {
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo)
-	userService := service.NewUserService(userRepo)
+	userService := service.NewUserService(userRepo, studentRepo, lecturerRepo)
 	studentService := service.NewStudentService(studentRepo) 
 	lecturerService := service.NewLecturerService(lecturerRepo)
 

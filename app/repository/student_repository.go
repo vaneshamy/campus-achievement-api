@@ -13,6 +13,31 @@ func NewStudentRepository(db *sql.DB) *StudentRepository {
 	return &StudentRepository{db}
 }
 
+func (r *StudentRepository) CreateStudent(s *model.Student) error {
+
+    var advisor interface{}
+    if s.AdvisorID == "" {
+        advisor = nil // kirim NULL
+    } else {
+        advisor = s.AdvisorID
+    }
+
+    query := `
+        INSERT INTO students (id, user_id, student_id, program_study, academic_year, advisor_id)
+        VALUES ($1, $2, $3, $4, $5, $6)
+    `
+    _, err := r.db.Exec(
+        query,
+        s.ID,
+        s.UserID,
+        s.StudentID,
+        s.ProgramStudy,
+        s.AcademicYear,
+        advisor,
+    )
+    return err
+}
+
 // GET ALL STUDENTS
 func (r *StudentRepository) FindAll() ([]model.Student, error) {
 	rows, err := r.db.Query(`SELECT id, user_id, student_id, program_study, academic_year, advisor_id, created_at FROM students`)
@@ -34,9 +59,9 @@ func (r *StudentRepository) FindAll() ([]model.Student, error) {
 func (r *StudentRepository) FindByID(id string) (*model.Student, error) {
 	var s model.Student
 	err := r.db.QueryRow(`
-        SELECT id, user_id, student_id, program_study, academic_year, advisor_id, created_at 
-        FROM students WHERE id = $1
-    `, id).Scan(&s.ID, &s.UserID, &s.StudentID, &s.ProgramStudy, &s.AcademicYear, &s.AdvisorID, &s.CreatedAt)
+    SELECT id, user_id, student_id, program_study, academic_year, advisor_id, created_at 
+    FROM students WHERE id = $1`, id).Scan(&s.ID, &s.UserID, &s.StudentID, &s.ProgramStudy, &s.AcademicYear, &s.AdvisorID, &s.CreatedAt)
+
 
 	if err != nil {
 		return nil, err

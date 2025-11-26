@@ -93,3 +93,4 @@ func ValidateAccessToken(tokenStr string) (*model.JWTClaims, error) {
         Type:        "access",
     }, nil
 }
+

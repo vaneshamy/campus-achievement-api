@@ -95,9 +95,6 @@ func (r *UserRepository) GetUserPermissions(roleID string) ([]string, error) {
     return perms, nil
 }
 
-// ================================
-//  CREATE
-// ================================
 func (r *UserRepository) Create(u *model.User) error {
 
 	query := `
@@ -185,3 +182,15 @@ func (r *UserRepository) SetUserRole(userID, roleID string) error {
 	return err
 }
 
+func (r *UserRepository) GetRoleNameByID(roleID string) (string, error) {
+    var name string
+    err := r.db.QueryRow(`
+        SELECT name FROM roles WHERE id = $1
+    `, roleID).Scan(&name)
+
+    if err == sql.ErrNoRows {
+        return "", fmt.Errorf("role not found")
+    }
+
+    return name, err
+}
