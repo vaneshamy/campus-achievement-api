@@ -9,13 +9,20 @@ type User struct {
 	ID           string    `json:"id"`
 	Username     string    `json:"username"`
 	Email        string    `json:"email"`
-	PasswordHash string    `json:"-"` // Tidak di-expose ke JSON
+	PasswordHash string    `json:"-"` 
 	FullName     string    `json:"fullName"`
 	RoleID       string    `json:"roleId"`
 	RoleName     string    `json:"role"`
 	IsActive     bool      `json:"isActive"`
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`
+
+	StudentID    *string   `json:"studentId"`
+	ProgramStudy *string   `json:"programStudy"`
+	AcademicYear *string   `json:"academicYear"`
+
+	LecturerID *string     `json:"lecturerId"`
+	Department *string     `json:"department"`
 }
 
 // Role model untuk tabel roles

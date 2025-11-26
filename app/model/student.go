@@ -8,10 +8,11 @@ type Student struct {
 	StudentID     string    `json:"studentId"`
 	ProgramStudy  string    `json:"programStudy"`
 	AcademicYear  string    `json:"academicYear"`
-	AdvisorID     string    `json:"advisorId"`
+	AdvisorID     *string    `json:"advisorId"`
 	CreatedAt     time.Time `json:"createdAt"`
 }
 
 type UpdateAdvisorRequest struct {
 	AdvisorID string `json:"advisorId"`
+	
 }

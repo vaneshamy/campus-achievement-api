@@ -53,14 +53,13 @@ func (s *UserService) CreateUser(req *model.User) error {
 
     // AUTO CREATE STUDENT
     if req.RoleName == "Mahasiswa" {
-        randomID := helper.GenerateRandomCode(8)
 
         err = s.studentRepo.CreateStudent(&model.Student{
             ID:           uuid.New().String(),
             UserID:       req.ID,
-            StudentID:    randomID,
-            ProgramStudy: "Unknown",
-            AcademicYear: "2025",
+            StudentID:    *req.StudentID,
+            ProgramStudy: *req.ProgramStudy,
+            AcademicYear: *req.AcademicYear,
         })
         if err != nil {
             return fmt.Errorf("failed to create student profile: %v", err)
@@ -69,13 +68,12 @@ func (s *UserService) CreateUser(req *model.User) error {
 
     // AUTO CREATE LECTURER
     if req.RoleName == "Dosen Wali" {
-        randomID := helper.GenerateRandomCode(8)
 
         err = s.lecturerRepo.CreateLecturer(&model.Lecturer{
             ID:         uuid.New().String(),
             UserID:     req.ID,
-            LecturerID: randomID,
-            Department: "General",
+            LecturerID: *req.LecturerID,
+            Department: *req.Department,
         })
         if err != nil {
             return fmt.Errorf("failed to create lecturer profile: %v", err)

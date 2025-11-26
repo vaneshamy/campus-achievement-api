@@ -16,8 +16,8 @@ func NewStudentRepository(db *sql.DB) *StudentRepository {
 func (r *StudentRepository) CreateStudent(s *model.Student) error {
 
     var advisor interface{}
-    if s.AdvisorID == "" {
-        advisor = nil // kirim NULL
+    if s.AdvisorID == nil || *s.AdvisorID == "" {
+        advisor = nil 
     } else {
         advisor = s.AdvisorID
     }
@@ -57,17 +57,28 @@ func (r *StudentRepository) FindAll() ([]model.Student, error) {
 
 // GET STUDENT BY ID
 func (r *StudentRepository) FindByID(id string) (*model.Student, error) {
-	var s model.Student
-	err := r.db.QueryRow(`
-    SELECT id, user_id, student_id, program_study, academic_year, advisor_id, created_at 
-    FROM students WHERE id = $1`, id).Scan(&s.ID, &s.UserID, &s.StudentID, &s.ProgramStudy, &s.AcademicYear, &s.AdvisorID, &s.CreatedAt)
+    var s model.Student
 
+    err := r.db.QueryRow(`
+        SELECT id, user_id, student_id, program_study, academic_year, advisor_id, created_at
+        FROM students WHERE id = $1
+    `, id).Scan(
+        &s.ID,
+        &s.UserID,
+        &s.StudentID,
+        &s.ProgramStudy,
+        &s.AcademicYear,
+        &s.AdvisorID,   // <-- penting!
+        &s.CreatedAt,
+    )
 
-	if err != nil {
-		return nil, err
-	}
-	return &s, nil
+    if err != nil {
+        return nil, err
+    }
+
+    return &s, nil
 }
+
 
 // UPDATE ADVISOR
 func (r *StudentRepository) UpdateAdvisor(studentID, advisorID string) error {
