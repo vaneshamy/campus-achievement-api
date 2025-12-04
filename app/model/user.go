@@ -20,6 +20,7 @@ type User struct {
 	StudentID    *string   `json:"studentId"`
 	ProgramStudy *string   `json:"programStudy"`
 	AcademicYear *string   `json:"academicYear"`
+	AdvisorID     *string    `json:"advisorId"`
 
 	LecturerID *string     `json:"lecturerId"`
 	Department *string     `json:"department"`

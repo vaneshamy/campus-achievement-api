@@ -3,6 +3,9 @@ package repository
 import (
     "database/sql"
     "fmt"
+    "go-fiber/helper"
+
+	"github.com/google/uuid"
     "go-fiber/app/model"
 )
 
@@ -95,25 +98,101 @@ func (r *UserRepository) GetUserPermissions(roleID string) ([]string, error) {
     return perms, nil
 }
 
-func (r *UserRepository) Create(u *model.User) error {
+func (r *UserRepository) Create(req *model.User) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
 
-	query := `
-		INSERT INTO users (id, username, email, password_hash, full_name, role_id, is_active)
-		VALUES ($1,$2,$3,$4,$5,$6,true)
-	`
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
 
-	_, err := r.db.Exec(
-		query,
-		u.ID,
-		u.Username,
-		u.Email,
-		u.PasswordHash,
-		u.FullName,
-		u.RoleID,
+	// Ambil nama role
+	roleName, err := r.GetRoleNameByID(req.RoleID)
+	if err != nil {
+		return fmt.Errorf("invalid role")
+	}
+	req.RoleName = roleName
+
+	// Validasi role Mahasiswa
+	if roleName == "Mahasiswa" {
+		if req.StudentID == nil || req.ProgramStudy == nil || req.AcademicYear == nil {
+			return fmt.Errorf("studentId, programStudy and academicYear are required for Mahasiswa")
+		}
+	}
+
+	// Validasi role Dosen Wali
+	if roleName == "Dosen Wali" {
+		if req.LecturerID == nil || req.Department == nil {
+			return fmt.Errorf("lecturerId and department are required for Dosen Wali")
+		}
+	}
+
+	// Hash password
+	hashed, err := helper.HashPassword(req.PasswordHash)
+	if err != nil {
+		return fmt.Errorf("failed to hash password")
+	}
+	req.PasswordHash = hashed
+
+	// Insert ke users
+	_, err = tx.Exec(`
+        INSERT INTO users (id, username, email, password_hash, full_name, role_id, is_active)
+        VALUES ($1,$2,$3,$4,$5,$6,true)
+    `,
+		req.ID,
+		req.Username,
+		req.Email,
+		req.PasswordHash,
+		req.FullName,
+		req.RoleID,
 	)
+	if err != nil {
+		return err
+	}
 
-	return err
+	// Insert student jika role mahasiswa
+	if roleName == "Mahasiswa" {
+		_, err = tx.Exec(`
+            INSERT INTO students (id, user_id, student_id, program_study, academic_year, advisor_id)
+			VALUES ($1,$2,$3,$4,$5,$6)
+		`,
+			uuid.New().String(),
+			req.ID,
+			*req.StudentID,
+			*req.ProgramStudy,
+			*req.AcademicYear,
+			*req.AdvisorID,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Insert lecturer jika role dosen wali
+	if roleName == "Dosen Wali" {
+		_, err = tx.Exec(`
+            INSERT INTO lecturers (id, user_id, lecturer_id, department)
+			VALUES ($1,$2,$3,$4)
+        `,
+			uuid.New().String(),
+			req.ID,
+			*req.LecturerID,
+			*req.Department,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
+
 
 func (r *UserRepository) FindAll() ([]model.User, error) {
 

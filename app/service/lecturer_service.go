@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/gofiber/fiber/v2"
 	"go-fiber/app/model"
 	"go-fiber/app/repository"
 )
@@ -13,10 +14,20 @@ func NewLecturerService(lecturerRepo *repository.LecturerRepository) *LecturerSe
 	return &LecturerService{lecturerRepo}
 }
 
-func (s *LecturerService) GetLecturers() ([]model.Lecturer, error) {
-	return s.lecturerRepo.FindAll()
+func (s *LecturerService) HandleGetLecturers(c *fiber.Ctx) error {
+	data, err := s.lecturerRepo.FindAll()
+	if err != nil {
+		return c.Status(500).JSON(model.ErrorResponse("Failed get lecturers", err.Error()))
+	}
+	return c.JSON(model.SuccessResponse(data))
 }
 
-func (s *LecturerService) GetAdvisees(lecturerID string) ([]model.Student, error) {
-	return s.lecturerRepo.FindAdvisees(lecturerID)
+func (s *LecturerService) HandleGetAdvisees(c *fiber.Ctx) error {
+	lecturerID := c.Params("id")
+
+	data, err := s.lecturerRepo.FindAdvisees(lecturerID)
+	if err != nil {
+		return c.Status(404).JSON(model.ErrorResponse("Lecturer not found", nil))
+	}
+	return c.JSON(model.SuccessResponse(data))
 }

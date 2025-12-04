@@ -7,7 +7,7 @@ import (
 	"go-fiber/app/repository"
 	"go-fiber/helper"
 
-	"github.com/google/uuid"
+	// "github.com/google/uuid"
 )
 
 type UserService struct {
@@ -30,59 +30,8 @@ func NewUserService(
 }
 
 func (s *UserService) CreateUser(req *model.User) error {
-
-    // Hash password
-    hashed, err := helper.HashPassword(req.PasswordHash)
-    if err != nil {
-        return fmt.Errorf("failed to hash password")
-    }
-    req.PasswordHash = hashed
-
-    // Ambil roleName berdasarkan roleId
-    roleName, err := s.userRepo.GetRoleNameByID(req.RoleID)
-    if err != nil {
-        return fmt.Errorf("role not found")
-    }
-    req.RoleName = roleName
-
-    // Simpan user
-    err = s.userRepo.Create(req)
-    if err != nil {
-        return err
-    }
-
-    // AUTO CREATE STUDENT
-    if req.RoleName == "Mahasiswa" {
-
-        err = s.studentRepo.CreateStudent(&model.Student{
-            ID:           uuid.New().String(),
-            UserID:       req.ID,
-            StudentID:    *req.StudentID,
-            ProgramStudy: *req.ProgramStudy,
-            AcademicYear: *req.AcademicYear,
-        })
-        if err != nil {
-            return fmt.Errorf("failed to create student profile: %v", err)
-        }
-    }
-
-    // AUTO CREATE LECTURER
-    if req.RoleName == "Dosen Wali" {
-
-        err = s.lecturerRepo.CreateLecturer(&model.Lecturer{
-            ID:         uuid.New().String(),
-            UserID:     req.ID,
-            LecturerID: *req.LecturerID,
-            Department: *req.Department,
-        })
-        if err != nil {
-            return fmt.Errorf("failed to create lecturer profile: %v", err)
-        }
-    }
-
-    return nil
+	return s.userRepo.Create(req)
 }
-
 
 func (s *UserService) GetAllUsers() ([]model.User, error) {
 	return s.userRepo.FindAll()
