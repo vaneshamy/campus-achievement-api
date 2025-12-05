@@ -87,3 +87,27 @@ func (r *StudentRepository) UpdateAdvisor(studentID, advisorID string) error {
     `, advisorID, studentID)
 	return err
 }
+
+// GET STUDENT BY USER ID
+func (r *StudentRepository) FindByUserID(userID string) (*model.Student, error) {
+    var s model.Student
+
+    err := r.db.QueryRow(`
+        SELECT id, user_id, student_id, program_study, academic_year, advisor_id, created_at
+        FROM students WHERE user_id = $1
+    `, userID).Scan(
+        &s.ID,
+        &s.UserID,
+        &s.StudentID,
+        &s.ProgramStudy,
+        &s.AcademicYear,
+        &s.AdvisorID,
+        &s.CreatedAt,
+    )
+
+    if err != nil {
+        return nil, err
+    }
+
+    return &s, nil
+}
