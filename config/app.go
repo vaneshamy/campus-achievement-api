@@ -76,7 +76,7 @@ func NewApp(db *sql.DB) *fiber.App {
 	route.SetupAuthRoutes(api, authService)
 	route.SetupAchievementRoutes(api, achievementService)
 	route.SetupUserRoutes(api, userService)
-	route.SetupStudentRoutes(api, studentService)
+	route.SetupStudentRoutes(api, studentService, achievementService)
 	route.SetupLecturerRoutes(api, lecturerService)
 
 	// 404 Handler

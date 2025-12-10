@@ -8,18 +8,19 @@ import (
 
 func SetupLecturerRoutes(app fiber.Router, lecturerService *service.LecturerService) {
 
-	lec := app.Group("/lecturers",
-		middleware.AuthMiddleware(),
-		middleware.RequireRole("Admin", "Dosen Wali"),
-	)
+    lec := app.Group("/lecturers",
+        middleware.AuthMiddleware(),
+    )
 
-	// GET /lecturers
-	lec.Get("/", func(c *fiber.Ctx) error {
-		return lecturerService.HandleGetLecturers(c)
-	})
+    // GET /lecturers
+    lec.Get("/",
+        middleware.RequirePermission("user:manage"),
+        lecturerService.GetLecturers,
+    )
 
-	// GET /lecturers/:id/advisees
-	lec.Get("/:id/advisees", func(c *fiber.Ctx) error {
-		return lecturerService.HandleGetAdvisees(c)
-	})
+    // GET /lecturers/:id/advisees
+    lec.Get("/:id/advisees",
+        middleware.RequirePermission("user:manage"),
+        lecturerService.GetAdvisees,
+    )
 }

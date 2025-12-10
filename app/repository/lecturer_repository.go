@@ -62,3 +62,28 @@ func (r *LecturerRepository) FindAdvisees(lecturerID string) ([]model.Student, e
 
 	return list, nil
 }
+
+func (r *LecturerRepository) FindByID(id string) (*model.Lecturer, error) {
+    var lec model.Lecturer
+
+    err := r.db.QueryRow(`
+        SELECT id, user_id, lecturer_id, department, created_at
+        FROM lecturers
+        WHERE id = $1
+    `, id).Scan(
+        &lec.ID,
+        &lec.UserID,
+        &lec.LecturerID,
+        &lec.Department,
+        &lec.CreatedAt,
+    )
+
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return nil, err
+        }
+        return nil, err
+    }
+
+    return &lec, nil
+}

@@ -51,3 +51,18 @@ func (r *MongoAchievementRepository) FindByID(ctx context.Context, id primitive.
 	}
 	return &a, nil
 }
+
+func (r *MongoAchievementRepository) AddAttachment(
+    ctx context.Context,
+    id primitive.ObjectID,
+    att model.Attachment,
+) error {
+    _, err := r.collection.UpdateOne(
+        ctx,
+        bson.M{"_id": id},
+        bson.M{
+            "$push": bson.M{"attachments": att},
+        },
+    )
+    return err
+}

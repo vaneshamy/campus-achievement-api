@@ -14,7 +14,7 @@ func NewLecturerService(lecturerRepo *repository.LecturerRepository) *LecturerSe
 	return &LecturerService{lecturerRepo}
 }
 
-func (s *LecturerService) HandleGetLecturers(c *fiber.Ctx) error {
+func (s *LecturerService) GetLecturers(c *fiber.Ctx) error {
 	data, err := s.lecturerRepo.FindAll()
 	if err != nil {
 		return c.Status(500).JSON(model.ErrorResponse("Failed get lecturers", err.Error()))
@@ -22,7 +22,7 @@ func (s *LecturerService) HandleGetLecturers(c *fiber.Ctx) error {
 	return c.JSON(model.SuccessResponse(data))
 }
 
-func (s *LecturerService) HandleGetAdvisees(c *fiber.Ctx) error {
+func (s *LecturerService) GetAdvisees(c *fiber.Ctx) error {
 	lecturerID := c.Params("id")
 
 	data, err := s.lecturerRepo.FindAdvisees(lecturerID)

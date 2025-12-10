@@ -50,45 +50,24 @@ func AuthMiddleware() fiber.Handler {
 // RequirePermission middleware untuk cek permission spesifik
 func RequirePermission(permission string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// 1. Ambil user claims dari context
-		user := c.Locals("user")
-		if user == nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(model.ErrorResponse(
-				"Unauthorized",
-				nil,
-			))
-		}
+		claims := c.Locals("user").(*model.JWTClaims)
 
-		claims, ok := user.(*model.JWTClaims)
-		if !ok {
-			return c.Status(fiber.StatusUnauthorized).JSON(model.ErrorResponse(
-				"Invalid user context",
-				nil,
-			))
-		}
-
-		// 2. Cek apakah user memiliki permission yang diperlukan
-		hasPermission := false
 		for _, p := range claims.Permissions {
 			if p == permission {
-				hasPermission = true
-				break
+				return c.Next()
 			}
 		}
 
-		if !hasPermission {
-			return c.Status(fiber.StatusForbidden).JSON(model.ErrorResponse(
-				"Insufficient permissions",
-				map[string]string{
-					"required":   permission,
-					"user_role":  claims.Role,
-				},
-			))
-		}
-
-		return c.Next()
+		return c.Status(fiber.StatusForbidden).JSON(model.ErrorResponse(
+			"Akses ditolak: permission tidak mencukupi",
+			map[string]string{
+				"required": permission,
+				"role": claims.Role,
+			},
+		))
 	}
 }
+
 
 // RequireRole middleware untuk cek role spesifik
 func RequireRole(roles ...string) fiber.Handler {

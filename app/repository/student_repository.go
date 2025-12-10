@@ -111,3 +111,22 @@ func (r *StudentRepository) FindByUserID(userID string) (*model.Student, error) 
 
     return &s, nil
 }
+
+func (r *StudentRepository) FindByAdvisorID(advisorID string) ([]model.Student, error) {
+    rows, err := r.db.Query(`
+        SELECT id, user_id, student_id, program_study, academic_year, advisor_id, created_at
+        FROM students WHERE advisor_id = $1
+    `, advisorID)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var list []model.Student
+    for rows.Next() {
+        var s model.Student
+        rows.Scan(&s.ID, &s.UserID, &s.StudentID, &s.ProgramStudy, &s.AcademicYear, &s.AdvisorID, &s.CreatedAt)
+        list = append(list, s)
+    }
+    return list, nil
+}
