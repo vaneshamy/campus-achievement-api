@@ -10,6 +10,8 @@ import (
 	"go-fiber/app/repository"
 
 	"github.com/google/uuid"
+    // "go.mongodb.org/mongo-driver/bson"
+
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -39,29 +41,30 @@ func (s *AchievementService) Create(c *fiber.Ctx) error {
 		return c.Status(400).JSON(model.ErrorResponse("invalid body", err.Error()))
 	}
 
-	// ✅ Ambil JWT claims dari middleware
+	// Abaikan poin dari request
+	req.Points = 0
+
 	claims, ok := c.Locals("user").(*model.JWTClaims)
 	if !ok {
 		return c.Status(401).JSON(model.ErrorResponse("unauthorized", nil))
 	}
 
-	// ✅ Ambil student berdasarkan user login
 	student, err := s.studentRepo.FindByUserID(claims.UserID)
 	if err != nil || student == nil {
 		return c.Status(404).JSON(model.ErrorResponse("student not found", nil))
 	}
 
-	// ✅ Paksa studentId berasal dari login user
+	// StudentID dipaksa dari user login
 	req.StudentID = student.ID
 
-	// ✅ Create ke Mongo terlebih dulu
+	// Insert Mongo
 	ctx := context.Background()
 	objID, err := s.mongoRepo.CreateAchievement(ctx, &req)
 	if err != nil {
 		return c.Status(500).JSON(model.ErrorResponse("failed create achievement (mongo)", err.Error()))
 	}
 
-	// ✅ Simpan reference ke Postgre
+	// Insert Postgre Reference
 	ref := &model.AchievementReference{
 		ID:                 uuid.New().String(),
 		StudentID:          student.ID,
@@ -72,13 +75,12 @@ func (s *AchievementService) Create(c *fiber.Ctx) error {
 	}
 
 	if err := s.postgresRepo.CreateReference(ref); err != nil {
-		// rollback mongo insert
 		_ = s.mongoRepo.DeleteAchievement(ctx, objID)
 		return c.Status(500).JSON(model.ErrorResponse("failed create achievement reference", err.Error()))
 	}
 
 	return c.JSON(model.SuccessResponse(fiber.Map{
-		"reference": ref,
+		"reference":     ref,
 		"achievementId": objID.Hex(),
 	}))
 }
@@ -86,59 +88,70 @@ func (s *AchievementService) Create(c *fiber.Ctx) error {
 
 // GET /achievements
 func (s *AchievementService) GetAll(c *fiber.Ctx) error {
-	// For simplicity: support optional query ?studentId=...
-	studentId := c.Query("studentId")
-	var refs []model.AchievementReference
-	var err error
-	if studentId != "" {
-		refs, err = s.postgresRepo.FindByStudentID(studentId)
-	} else {
-		refs, err = s.postgresRepo.FindAll()
-	}
-	if err != nil {
-		return c.Status(500).JSON(model.ErrorResponse("failed fetch references", err.Error()))
-	}
+    // For simplicity: support optional query ?studentId=...
+    studentId := c.Query("studentId")
+    var refs []model.AchievementReference
+    var err error
+    if studentId != "" {
+        refs, err = s.postgresRepo.FindByStudentID(studentId)
+    } else {
+        refs, err = s.postgresRepo.FindAll()
+    }
+    if err != nil {
+        c.Status(fiber.StatusInternalServerError)
+        return c.JSON(model.ErrorResponse("failed fetch references", err.Error()))
+    }
 
-	// optionally fetch details from mongo (small set)
-	ctx := context.Background()
-	results := []fiber.Map{}
-	for _, r := range refs {
-		var ach *model.Achievement
-		objID, convErr := primitive.ObjectIDFromHex(r.MongoAchievementID)
-		if convErr == nil {
-			ach, _ = s.mongoRepo.FindByID(ctx, objID) // ignore error for now
-		}
-		results = append(results, fiber.Map{
-			"reference":    r,
-			"achievement":  ach,
-		})
-	}
+    // optionally fetch details from mongo (small set)
+    ctx := context.Background()
+    results := []fiber.Map{}
+    for _, r := range refs {
+        var ach *model.Achievement
+        objID, convErr := primitive.ObjectIDFromHex(r.MongoAchievementID)
+        if convErr == nil {
+            ach, _ = s.mongoRepo.FindByID(ctx, objID) // ignore error for now
+        }
+        results = append(results, fiber.Map{
+            "reference":   r,
+            "achievement": ach,
+        })
+    }
 
-	return c.JSON(model.SuccessResponse(results))
+    // 🔥 pastikan status sukses 200
+    c.Status(fiber.StatusOK)
+    return c.JSON(model.SuccessResponse(results))
 }
+
 
 // GET /achievements/:id
 func (s *AchievementService) GetByID(c *fiber.Ctx) error {
-	id := c.Params("id")
-	ref, err := s.postgresRepo.FindReferenceByID(id)
-	if err != nil {
-		return c.Status(404).JSON(model.ErrorResponse("reference not found", nil))
-	}
+    id := c.Params("id")
+    ref, err := s.postgresRepo.FindReferenceByID(id)
+    if err != nil {
+        c.Status(fiber.StatusNotFound)
+        return c.JSON(model.ErrorResponse("reference not found", nil))
+    }
 
-	objID, err := primitive.ObjectIDFromHex(ref.MongoAchievementID)
-	if err != nil {
-		return c.Status(500).JSON(model.ErrorResponse("invalid mongo id", err.Error()))
-	}
-	ach, err := s.mongoRepo.FindByID(context.Background(), objID)
-	if err != nil {
-		return c.Status(500).JSON(model.ErrorResponse("failed fetch achievement", err.Error()))
-	}
+    objID, err := primitive.ObjectIDFromHex(ref.MongoAchievementID)
+    if err != nil {
+        c.Status(fiber.StatusInternalServerError)
+        return c.JSON(model.ErrorResponse("invalid mongo id", err.Error()))
+    }
 
-	return c.JSON(model.SuccessResponse(fiber.Map{
-		"reference":   ref,
-		"achievement": ach,
-	}))
+    ach, err := s.mongoRepo.FindByID(context.Background(), objID)
+    if err != nil {
+        c.Status(fiber.StatusInternalServerError)
+        return c.JSON(model.ErrorResponse("failed fetch achievement", err.Error()))
+    }
+
+    // 🔥 pastikan status sukses 200
+    c.Status(fiber.StatusOK)
+    return c.JSON(model.SuccessResponse(fiber.Map{
+        "reference":   ref,
+        "achievement": ach,
+    }))
 }
+
 
 // PUT /achievements/:id (only allowed when draft or by owner - auth not implemented here)
 func (s *AchievementService) Update(c *fiber.Ctx) error {
@@ -263,8 +276,16 @@ func (s *AchievementService) Verify(c *fiber.Ctx) error {
         return c.Status(500).JSON(model.ErrorResponse("failed to verify", err.Error()))
     }
 
+    // 🔥 Pastikan status dikirim 200 meski middleware lain set 403
+    c.Status(fiber.StatusOK) // <- tambahkan ini
+
+    fmt.Println("STATUS BEFORE RETURN:", c.Response().StatusCode())
+    fmt.Println("Verify returned 200 OK")
+
     return c.JSON(model.SuccessResponse("achievement verified"))
 }
+
+
 
 
 
@@ -293,8 +314,12 @@ func (s *AchievementService) Reject(c *fiber.Ctx) error {
         return c.Status(500).JSON(model.ErrorResponse("failed to reject", err.Error()))
     }
 
+    // 🔥 Pastikan status sukses 200
+    c.Status(fiber.StatusOK)
+
     return c.JSON(model.SuccessResponse("achievement rejected"))
 }
+
 
 func (s *AchievementService) List(c *fiber.Ctx) error {
     claims := c.Locals("user").(*model.JWTClaims)
@@ -385,6 +410,9 @@ func (s *AchievementService) History(c *fiber.Ctx) error {
         return err
     }
 
+    // 🔥 Pastikan status sukses 200
+    c.Status(fiber.StatusOK)
+
     return c.JSON(model.SuccessResponse(fiber.Map{
         "id":          ref.ID,
         "status":      ref.Status,
@@ -451,7 +479,7 @@ func (s *AchievementService) checkOwnership(c *fiber.Ctx, refStudentID string) e
 
     // Mahasiswa saja yang butuh ownership check
     if claims.Role != "Mahasiswa" {
-        return nil // dosen/admin lolos (ini khusus untuk step 1)
+        return nil 
     }
 
     // Cari student milik user login
@@ -570,3 +598,4 @@ func (s *AchievementService) GetStudentAchievements(c *fiber.Ctx) error {
 
     return c.JSON(model.SuccessResponse(results))
 }
+

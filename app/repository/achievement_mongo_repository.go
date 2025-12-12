@@ -57,12 +57,30 @@ func (r *MongoAchievementRepository) AddAttachment(
     id primitive.ObjectID,
     att model.Attachment,
 ) error {
-    _, err := r.collection.UpdateOne(
+    var doc model.Achievement
+    err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&doc)
+    if err != nil {
+        return err
+    }
+
+    if doc.Attachments == nil {
+        doc.Attachments = []model.Attachment{}
+        _, err := r.collection.UpdateOne(
+            ctx,
+            bson.M{"_id": id},
+            bson.M{"$set": bson.M{"attachments": doc.Attachments}},
+        )
+        if err != nil {
+            return err
+        }
+    }
+
+    // 3. Push attachment baru
+    _, err = r.collection.UpdateOne(
         ctx,
         bson.M{"_id": id},
-        bson.M{
-            "$push": bson.M{"attachments": att},
-        },
+        bson.M{"$push": bson.M{"attachments": att}},
     )
     return err
 }
+

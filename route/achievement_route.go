@@ -12,7 +12,7 @@ func SetupAchievementRoutes(app fiber.Router, svc *service.AchievementService) {
 		middleware.AuthMiddleware(),
 	)
 	ach.Get("/",
-		middleware.RequirePermission("achievement:view"),
+		middleware.RequirePermission("achievement:read"),
 		svc.List,
 	)
 	ach.Get("/:id",
@@ -40,7 +40,7 @@ func SetupAchievementRoutes(app fiber.Router, svc *service.AchievementService) {
 		svc.Verify,
 	)
 	ach.Post("/:id/reject",
-		middleware.RequirePermission("achievement:reject"),
+		middleware.RequirePermission("achievement:verify"),
 		svc.Reject,
 	)
 	ach.Get("/:id/history",
