@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
     "go-fiber/app/model"
+	"strings"
 )
 
 type UserRepository struct {
@@ -229,26 +230,149 @@ func (r *UserRepository) FindAll() ([]model.User, error) {
 	return users, nil
 }
 
-func (r *UserRepository) Update(id string, u *model.User) error {
+func (r *UserRepository) UpdatePartial(id string, req *model.UpdateUserRequest) error {
+    tx, err := r.db.Begin()
+    if err != nil {
+        return err
+    }
+    defer func() {
+        if err != nil {
+            tx.Rollback()
+        } else {
+            tx.Commit()
+        }
+    }()
 
-	query := `
-		UPDATE users
-		SET username=$1, email=$2, password_hash=$3, full_name=$4, role_id=$5
-		WHERE id=$6
-	`
+    // ===== users table =====
+    sets := []string{}
+    args := []interface{}{}
+    idx := 1
 
-	_, err := r.db.Exec(
-		query,
-		u.Username,
-		u.Email,
-		u.PasswordHash,
-		u.FullName,
-		u.RoleID,
-		id,
-	)
+    if req.Username != nil {
+        sets = append(sets, fmt.Sprintf("username=$%d", idx))
+        args = append(args, *req.Username)
+        idx++
+    }
+    if req.Email != nil {
+        sets = append(sets, fmt.Sprintf("email=$%d", idx))
+        args = append(args, *req.Email)
+        idx++
+    }
+    if req.FullName != nil {
+        sets = append(sets, fmt.Sprintf("full_name=$%d", idx))
+        args = append(args, *req.FullName)
+        idx++
+    }
+    if req.Password != nil {
+        hashed, _ := helper.HashPassword(*req.Password)
+        sets = append(sets, fmt.Sprintf("password_hash=$%d", idx))
+        args = append(args, hashed)
+        idx++
+    }
+    if req.RoleID != nil {
+        sets = append(sets, fmt.Sprintf("role_id=$%d", idx))
+        args = append(args, *req.RoleID)
+        idx++
+    }
 
-	return err
+    if len(sets) > 0 {
+        query := fmt.Sprintf(
+            "UPDATE users SET %s WHERE id=$%d",
+            strings.Join(sets, ", "),
+            idx,
+        )
+        args = append(args, id)
+        if _, err = tx.Exec(query, args...); err != nil {
+            return err
+        }
+    }
+
+    // ===== ambil role aktif =====
+    var roleName string
+    err = tx.QueryRow(`
+        SELECT r.name
+        FROM users u JOIN roles r ON r.id=u.role_id
+        WHERE u.id=$1
+    `, id).Scan(&roleName)
+    if err != nil {
+        return err
+    }
+
+    // ===== students =====
+    if roleName == "Mahasiswa" {
+        sets := []string{}
+        args := []interface{}{}
+        idx := 1
+
+        if req.StudentID != nil {
+            sets = append(sets, fmt.Sprintf("student_id=$%d", idx))
+            args = append(args, *req.StudentID)
+            idx++
+        }
+        if req.ProgramStudy != nil {
+            sets = append(sets, fmt.Sprintf("program_study=$%d", idx))
+            args = append(args, *req.ProgramStudy)
+            idx++
+        }
+        if req.AcademicYear != nil {
+            sets = append(sets, fmt.Sprintf("academic_year=$%d", idx))
+            args = append(args, *req.AcademicYear)
+            idx++
+        }
+        if req.AdvisorID != nil {
+            sets = append(sets, fmt.Sprintf("advisor_id=$%d", idx))
+            args = append(args, *req.AdvisorID)
+            idx++
+        }
+
+        if len(sets) > 0 {
+            query := fmt.Sprintf(
+                "UPDATE students SET %s WHERE user_id=$%d",
+                strings.Join(sets, ", "),
+                idx,
+            )
+            args = append(args, id)
+            _, err = tx.Exec(query, args...)
+            if err != nil {
+                return err
+            }
+        }
+    }
+
+    // ===== lecturers =====
+    if roleName == "Dosen Wali" {
+        sets := []string{}
+        args := []interface{}{}
+        idx := 1
+
+        if req.LecturerID != nil {
+            sets = append(sets, fmt.Sprintf("lecturer_id=$%d", idx))
+            args = append(args, *req.LecturerID)
+            idx++
+        }
+        if req.Department != nil {
+            sets = append(sets, fmt.Sprintf("department=$%d", idx))
+            args = append(args, *req.Department)
+            idx++
+        }
+
+        if len(sets) > 0 {
+            query := fmt.Sprintf(
+                "UPDATE lecturers SET %s WHERE user_id=$%d",
+                strings.Join(sets, ", "),
+                idx,
+            )
+            args = append(args, id)
+            _, err = tx.Exec(query, args...)
+            if err != nil {
+                return err
+            }
+        }
+    }
+
+    return nil
 }
+
 
 func (r *UserRepository) Delete(id string) error {
 

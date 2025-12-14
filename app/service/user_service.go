@@ -73,27 +73,20 @@ func (s *UserService) CreateUser(c *fiber.Ctx) error {
 }
 
 func (s *UserService) UpdateUser(c *fiber.Ctx) error {
-	id := c.Params("id")
-	var req model.User
+    id := c.Params("id")
 
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(model.ErrorResponse("invalid body", err.Error()))
-	}
+    var req model.UpdateUserRequest
+    if err := c.BodyParser(&req); err != nil {
+        return c.Status(400).JSON(model.ErrorResponse("invalid body", err.Error()))
+    }
 
-	if req.PasswordHash != "" {
-		hashed, err := helper.HashPassword(req.PasswordHash)
-		if err != nil {
-			return c.Status(500).JSON(model.ErrorResponse("failed to hash password", err.Error()))
-		}
-		req.PasswordHash = hashed
-	}
+    if err := s.userRepo.UpdatePartial(id, &req); err != nil {
+        return c.Status(500).JSON(model.ErrorResponse("failed to update user", err.Error()))
+    }
 
-	if err := s.userRepo.Update(id, &req); err != nil {
-		return c.Status(500).JSON(model.ErrorResponse("failed to update user", err.Error()))
-	}
-
-	return c.JSON(model.SuccessResponse("User updated successfully"))
+    return c.JSON(model.SuccessResponse("User updated successfully"))
 }
+
 
 func (s *UserService) DeleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")

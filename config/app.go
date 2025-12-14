@@ -13,9 +13,6 @@ import (
 	"go-fiber/route"
 )
 
-/*
-	NewApp membuat instance Fiber app dengan konfigurasi lengkap
-*/
 func NewApp(db *sql.DB) *fiber.App {
 
 	// Buat Fiber app
@@ -34,6 +31,7 @@ func NewApp(db *sql.DB) *fiber.App {
 	studentRepo := repository.NewStudentRepository(db)
 	lecturerRepo := repository.NewLecturerRepository(db)
 	achievementRepo := repository.NewAchievementRepository(db)
+	reportRepo := repository.NewReportRepository(db)
 
 	// Mongo
 	mongoClient, err := NewMongoClient()
@@ -45,6 +43,8 @@ func NewApp(db *sql.DB) *fiber.App {
 	achievementsColl := mongoDB.Collection("achievements")
 
 	mongoAchievementRepo := repository.NewMongoAchievementRepository(achievementsColl)
+	mongoReportRepo := repository.NewMongoReportRepository(achievementsColl)
+
 
 	// service
 	authService := service.NewAuthService(userRepo)
@@ -57,6 +57,13 @@ func NewApp(db *sql.DB) *fiber.App {
 		mongoAchievementRepo,
 		studentRepo,
 	)
+
+	reportService := service.NewReportService(
+    reportRepo,
+    mongoReportRepo,
+    studentRepo,
+	)
+
 
 	// route
 	api := app.Group("/api/v1")
@@ -78,6 +85,7 @@ func NewApp(db *sql.DB) *fiber.App {
 	route.SetupUserRoutes(api, userService)
 	route.SetupStudentRoutes(api, studentService, achievementService)
 	route.SetupLecturerRoutes(api, lecturerService)
+	route.SetupReportRoutes(api, reportService)
 
 	// 404 Handler
 	app.Use(func(c *fiber.Ctx) error {

@@ -26,6 +26,25 @@ type User struct {
 	Department *string     `json:"department"`
 }
 
+type UpdateUserRequest struct {
+    Username      *string `json:"username"`
+    Email         *string `json:"email"`
+    Password      *string `json:"password"`
+    FullName      *string `json:"full_name"`
+    RoleID        *string `json:"role_id"`
+
+    // Mahasiswa
+    StudentID     *string `json:"student_id"`
+    ProgramStudy *string `json:"program_study"`
+    AcademicYear *string `json:"academic_year"`
+    AdvisorID    *string `json:"advisor_id"`
+
+    // Dosen
+    LecturerID *string `json:"lecturer_id"`
+    Department *string `json:"department"`
+}
+
+
 // Role model untuk tabel roles
 type Role struct {
 	ID          string    `json:"id"`

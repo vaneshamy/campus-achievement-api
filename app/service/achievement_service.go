@@ -163,7 +163,6 @@ func (s *AchievementService) Update(c *fiber.Ctx) error {
 		return c.Status(404).JSON(model.ErrorResponse("reference not found", nil))
 	}
 
-	// ⛔ Ownership: mahasiswa hanya boleh update miliknya sendiri
 	if err := s.checkOwnership(c, ref.StudentID); err != nil {
 		return err
 	}
@@ -197,28 +196,34 @@ func (s *AchievementService) Update(c *fiber.Ctx) error {
 
 // DELETE /achievements/:id (soft-delete not implemented, do hard delete for draft)
 func (s *AchievementService) Delete(c *fiber.Ctx) error {
-	id := c.Params("id")
+    id := c.Params("id")
 
-	// Ambil reference
-	ref, err := s.postgresRepo.FindReferenceByID(id)
-	if err != nil {
-		return c.Status(404).JSON(model.ErrorResponse("reference not found", nil))
-	}
+    // Ambil reference dari PostgreSQL
+    ref, err := s.postgresRepo.FindReferenceByID(id)
+    if err != nil {
+        c.Status(fiber.StatusNotFound)
+        return c.JSON(model.ErrorResponse("reference not found", nil))
+    }
 
-	// ⛔ Ownership: mahasiswa hanya boleh delete miliknya sendiri
-	if err := s.checkOwnership(c, ref.StudentID); err != nil {
-		return err
-	}
+    if err := s.checkOwnership(c, ref.StudentID); err != nil {
+        return err
+    }
 
-	objID, err := primitive.ObjectIDFromHex(ref.MongoAchievementID)
-	if err == nil {
-		_ = s.mongoRepo.DeleteAchievement(context.Background(), objID)
-	}
+    if ref.Status != "draft" {
+        c.Status(fiber.StatusForbidden)
+        return c.JSON(model.ErrorResponse("cannot delete: achievement already submitted", nil))
+    }
 
-	note := "deleted"
-	_ = s.postgresRepo.UpdateReferenceStatus(id, "rejected", nil, nil, nil, &note)
+    objID, err := primitive.ObjectIDFromHex(ref.MongoAchievementID)
+    if err == nil {
+        _ = s.mongoRepo.DeleteAchievement(context.Background(), objID)
+    }
 
-	return c.JSON(model.SuccessResponse("achievement deleted"))
+    note := "deleted"
+    _ = s.postgresRepo.UpdateReferenceStatus(id, "rejected", nil, nil, nil, &note)
+ 
+    c.Status(fiber.StatusOK)
+    return c.JSON(model.SuccessResponse("achievement deleted"))
 }
 
 
