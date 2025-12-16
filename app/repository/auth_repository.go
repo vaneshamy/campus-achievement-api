@@ -11,6 +11,13 @@ type AuthRepository struct {
 	db *sql.DB
 }
 
+// AuthRepositoryInterface defines the contract
+type AuthRepositoryInterface interface {
+    FindByUsernameOrEmail(identifier string) (*model.User, error)
+    FindByID(id string) (*model.User, error)
+    GetUserPermissions(roleID string) ([]string, error)
+}
+
 func NewAuthRepository(db *sql.DB) *AuthRepository {
 	return &AuthRepository{db: db}
 }
