@@ -24,5 +24,5 @@ type Achievement struct {
 	Tags            []string           `bson:"tags" json:"tags"`
 	Points          int                `bson:"points" json:"points"`
 	CreatedAt       time.Time          `bson:"createdAt" json:"createdAt"`
-	UpdatedAt       time.Time          `bson:"updatedAt" json:"updatedAt"`'
+	UpdatedAt       time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
