@@ -10,6 +10,14 @@ import (
 	"go-fiber/database"
 )
 
+// @title Prestasi Backend API
+// @version 1.0
+// @description Sistem Pelaporan Prestasi Mahasiswa
+// @BasePath /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	// Load environment variables
 	config.LoadEnv()

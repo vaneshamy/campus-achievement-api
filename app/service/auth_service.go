@@ -54,7 +54,17 @@ func (s *AuthService) Login(req *model.LoginRequest) (*model.LoginResponse, erro
 	}, nil
 }
 
-
+// HandleLogin godoc
+// @Summary Login user
+// @Description Login menggunakan username/email dan password
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param body body model.LoginRequest true "Login request"
+// @Success 200 {object} model.APIResponse{data=model.LoginResponse}
+// @Failure 400 {object} model.APIResponse
+// @Failure 401 {object} model.APIResponse
+// @Router /auth/login [post]
 func (s *AuthService) HandleLogin(c *fiber.Ctx) error {
 
     var req model.LoginRequest
@@ -122,7 +132,14 @@ func (s *AuthService) RefreshToken(refreshToken string) (*model.LoginResponse, e
 	}, nil
 }
 
-
+// HandleRefresh godoc
+// @Summary Refresh access token
+// @Description Refresh token menggunakan refreshToken di cookie
+// @Tags Auth
+// @Produce json
+// @Success 200 {object} model.APIResponse{data=model.LoginResponse}
+// @Failure 401 {object} model.APIResponse
+// @Router /auth/refresh [post]
 func (s *AuthService) HandleRefresh(c *fiber.Ctx) error {
 
     refreshToken := c.Cookies("refreshToken")
@@ -152,11 +169,15 @@ func (s *AuthService) HandleRefresh(c *fiber.Ctx) error {
 
 // LOGOUT
 func (s *AuthService) Logout() error {
-    // Karena refresh token tersimpan di cookie
-    // logout hanya akan menghapus cookie di route
     return nil
 }
 
+// HandleLogout godoc
+// @Summary Logout user
+// @Tags Auth
+// @Produce json
+// @Success 200 {object} model.APIResponse
+// @Router /auth/logout [post]
 func (s *AuthService) HandleLogout(c *fiber.Ctx) error {
 
     c.ClearCookie("refreshToken")
@@ -190,7 +211,14 @@ func (s *AuthService) GetUserProfile(userID string) (*model.UserResponse, error)
 	}, nil
 }
 
-
+// HandleGetProfile godoc
+// @Summary Get user profile
+// @Tags Auth
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} model.APIResponse{data=model.UserResponse}
+// @Failure 401 {object} model.APIResponse
+// @Router /auth/profile [get]
 func (s *AuthService) HandleGetProfile(c *fiber.Ctx) error {
 
     claims, ok := c.Locals("user").(*model.JWTClaims)

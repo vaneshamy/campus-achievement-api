@@ -7,11 +7,15 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
+	swagger "github.com/gofiber/swagger"
+	_ "go-fiber/docs"
+
 	"go-fiber/app/repository"
 	"go-fiber/app/service"
 	"go-fiber/middleware"
 	"go-fiber/route"
 )
+
 
 func NewApp(db *sql.DB) *fiber.App {
 
@@ -25,6 +29,11 @@ func NewApp(db *sql.DB) *fiber.App {
 	app.Use(recover.New())
 	app.Use(middleware.CORSMiddleware())
 	app.Use(middleware.LoggerMiddleware())
+
+	// ======================
+	// Swagger UI
+	// ======================
+	app.Get("/swagger/*", swagger.HandlerDefault)
 
 	// PostgreSQL repositories
 	authRepo := repository.NewAuthRepository(db)
@@ -46,7 +55,6 @@ func NewApp(db *sql.DB) *fiber.App {
 	mongoAchievementRepo := repository.NewMongoAchievementRepository(achievementsColl)
 	mongoReportRepo := repository.NewMongoReportRepository(achievementsColl)
 
-
 	// service
 	authService := service.NewAuthService(authRepo)
 	userService := service.NewUserService(userRepo, studentRepo, lecturerRepo)
@@ -60,11 +68,10 @@ func NewApp(db *sql.DB) *fiber.App {
 	)
 
 	reportService := service.NewReportService(
-    reportRepo,
-    mongoReportRepo,
-    studentRepo,
+		reportRepo,
+		mongoReportRepo,
+		studentRepo,
 	)
-
 
 	// route
 	api := app.Group("/api/v1")

@@ -26,6 +26,17 @@ func NewUserService(
 }
 
 // ==================== GET ALL USERS ====================
+
+// GetAllUsers godoc
+// @Summary Get all users
+// @Description Mengambil semua data user
+// @Tags Users
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} model.APIResponse{data=[]model.User}
+// @Failure 401 {object} model.APIResponse
+// @Failure 403 {object} model.APIResponse
+// @Router /users [get]
 func (s *UserService) GetAllUsers(c *fiber.Ctx) error {
 	users, err := s.userRepo.FindAll()
 	if err != nil {
@@ -37,6 +48,19 @@ func (s *UserService) GetAllUsers(c *fiber.Ctx) error {
 }
 
 // ==================== GET USER BY ID ====================
+
+// GetUserByID godoc
+// @Summary Get user by ID
+// @Description Mengambil detail user berdasarkan ID
+// @Tags Users
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} model.APIResponse{data=model.User}
+// @Failure 404 {object} model.APIResponse
+// @Failure 401 {object} model.APIResponse
+// @Failure 403 {object} model.APIResponse
+// @Router /users/{id} [get]
 func (s *UserService) GetUserByID(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -51,6 +75,20 @@ func (s *UserService) GetUserByID(c *fiber.Ctx) error {
 }
 
 // ==================== CREATE USER ====================
+
+// CreateUser godoc
+// @Summary Create new user
+// @Description Membuat user baru (Admin only)
+// @Tags Users
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param body body model.CreateUserRequest true "Create user request"
+// @Success 201 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 401 {object} model.APIResponse
+// @Failure 403 {object} model.APIResponse
+// @Router /users [post]
 func (s *UserService) CreateUser(c *fiber.Ctx) error {
 	var req model.CreateUserRequest
 
@@ -72,6 +110,21 @@ func (s *UserService) CreateUser(c *fiber.Ctx) error {
 }
 
 // ==================== UPDATE USER ====================
+
+// UpdateUser godoc
+// @Summary Update user
+// @Description Update sebagian data user
+// @Tags Users
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param body body model.UpdateUserRequest true "Update user request"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 401 {object} model.APIResponse
+// @Failure 403 {object} model.APIResponse
+// @Router /users/{id} [put]
 func (s *UserService) UpdateUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -92,6 +145,18 @@ func (s *UserService) UpdateUser(c *fiber.Ctx) error {
 }
 
 // ==================== DELETE USER ====================
+
+// DeleteUser godoc
+// @Summary Delete user
+// @Description Menghapus user
+// @Tags Users
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} model.APIResponse
+// @Failure 401 {object} model.APIResponse
+// @Failure 403 {object} model.APIResponse
+// @Router /users/{id} [delete]
 func (s *UserService) DeleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -105,6 +170,21 @@ func (s *UserService) DeleteUser(c *fiber.Ctx) error {
 }
 
 // ==================== ASSIGN ROLE ====================
+
+// AssignRole godoc
+// @Summary Assign role to user
+// @Description Mengubah role user
+// @Tags Users
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param body body model.AssignRoleRequest true "Assign role request"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 401 {object} model.APIResponse
+// @Failure 403 {object} model.APIResponse
+// @Router /users/{id}/role [put]
 func (s *UserService) AssignRole(c *fiber.Ctx) error {
 	id := c.Params("id")
 
