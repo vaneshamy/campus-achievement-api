@@ -99,12 +99,11 @@ func (r *UserRepository) GetUserPermissions(roleID string) ([]string, error) {
     return perms, nil
 }
 
-func (r *UserRepository) Create(req *model.User) error {
+func (r *UserRepository) Create(req *model.CreateUserRequest) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
 	}
-
 	defer func() {
 		if err != nil {
 			tx.Rollback()
@@ -113,43 +112,42 @@ func (r *UserRepository) Create(req *model.User) error {
 		}
 	}()
 
-	// Ambil nama role
+	// Ambil role
 	roleName, err := r.GetRoleNameByID(req.RoleID)
 	if err != nil {
 		return fmt.Errorf("invalid role")
 	}
-	req.RoleName = roleName
 
-	// Validasi role Mahasiswa
+	// Validasi role
 	if roleName == "Mahasiswa" {
 		if req.StudentID == nil || req.ProgramStudy == nil || req.AcademicYear == nil {
-			return fmt.Errorf("studentId, programStudy and academicYear are required for Mahasiswa")
+			return fmt.Errorf("studentId, programStudy, academicYear wajib untuk Mahasiswa")
 		}
 	}
 
-	// Validasi role Dosen Wali
 	if roleName == "Dosen Wali" {
 		if req.LecturerID == nil || req.Department == nil {
-			return fmt.Errorf("lecturerId and department are required for Dosen Wali")
+			return fmt.Errorf("lecturerId dan department wajib untuk Dosen Wali")
 		}
 	}
 
 	// Hash password
-	hashed, err := helper.HashPassword(req.PasswordHash)
+	hashed, err := helper.HashPassword(req.Password)
 	if err != nil {
-		return fmt.Errorf("failed to hash password")
+		return err
 	}
-	req.PasswordHash = hashed
 
-	// Insert ke users
+	userID := uuid.New().String()
+
+	// Insert users
 	_, err = tx.Exec(`
-        INSERT INTO users (id, username, email, password_hash, full_name, role_id, is_active)
-        VALUES ($1,$2,$3,$4,$5,$6,true)
-    `,
-		req.ID,
+		INSERT INTO users (id, username, email, password_hash, full_name, role_id, is_active)
+		VALUES ($1,$2,$3,$4,$5,$6,true)
+	`,
+		userID,
 		req.Username,
 		req.Email,
-		req.PasswordHash,
+		hashed,
 		req.FullName,
 		req.RoleID,
 	)
@@ -157,32 +155,32 @@ func (r *UserRepository) Create(req *model.User) error {
 		return err
 	}
 
-	// Insert student jika role mahasiswa
+	// Insert mahasiswa
 	if roleName == "Mahasiswa" {
 		_, err = tx.Exec(`
-            INSERT INTO students (id, user_id, student_id, program_study, academic_year, advisor_id)
+			INSERT INTO students (id, user_id, student_id, program_study, academic_year, advisor_id)
 			VALUES ($1,$2,$3,$4,$5,$6)
 		`,
 			uuid.New().String(),
-			req.ID,
+			userID,
 			*req.StudentID,
 			*req.ProgramStudy,
 			*req.AcademicYear,
-			*req.AdvisorID,
+			req.AdvisorID,
 		)
 		if err != nil {
 			return err
 		}
 	}
 
-	// Insert lecturer jika role dosen wali
+	// Insert dosen wali
 	if roleName == "Dosen Wali" {
 		_, err = tx.Exec(`
-            INSERT INTO lecturers (id, user_id, lecturer_id, department)
+			INSERT INTO lecturers (id, user_id, lecturer_id, department)
 			VALUES ($1,$2,$3,$4)
-        `,
+		`,
 			uuid.New().String(),
-			req.ID,
+			userID,
 			*req.LecturerID,
 			*req.Department,
 		)
@@ -193,6 +191,7 @@ func (r *UserRepository) Create(req *model.User) error {
 
 	return nil
 }
+
 
 
 func (r *UserRepository) FindAll() ([]model.User, error) {
@@ -397,3 +396,11 @@ func (r *UserRepository) GetRoleNameByID(roleID string) (string, error) {
 
     return name, err
 }
+
+func (r *UserRepository) AssignRole(userID string, req *model.AssignRoleRequest) error {
+	_, err := r.db.Exec(`
+		UPDATE users SET role_id=$1 WHERE id=$2
+	`, req.RoleID, userID)
+	return err
+}
+

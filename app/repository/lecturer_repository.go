@@ -14,16 +14,21 @@ func NewLecturerRepository(db *sql.DB) *LecturerRepository {
 	return &LecturerRepository{db}
 }
 
-func (r *LecturerRepository) CreateLecturer(l *model.Lecturer) error {
-    query := `
-        INSERT INTO lecturers (id, user_id, lecturer_id, department, created_at)
-        VALUES ($1, $2, $3, $4, NOW())
-    `
-    _, err := r.db.Exec(query, l.ID, l.UserID, l.LecturerID, l.Department)
-    if err != nil {
-        return fmt.Errorf("failed to create lecturer: %v", err)
-    }
-    return nil
+func (r *LecturerRepository) CreateLecturer(req *model.CreateLecturerRequest) error {
+	_, err := r.db.Exec(`
+		INSERT INTO lecturers (id, user_id, lecturer_id, department, created_at)
+		VALUES (gen_random_uuid(), $1, $2, $3, NOW())
+	`,
+		req.UserID,
+		req.LecturerID,
+		req.Department,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to create lecturer: %v", err)
+	}
+
+	return nil
 }
 
 func (r *LecturerRepository) FindAll() ([]model.Lecturer, error) {

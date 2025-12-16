@@ -2,15 +2,15 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
-    "fmt"
 
-	"github.com/gofiber/fiber/v2"
 	"go-fiber/app/model"
 	"go-fiber/app/repository"
 
+	"github.com/gofiber/fiber/v2"
+
 	"github.com/google/uuid"
-    // "go.mongodb.org/mongo-driver/bson"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -289,10 +289,6 @@ func (s *AchievementService) Verify(c *fiber.Ctx) error {
 
     return c.JSON(model.SuccessResponse("achievement verified"))
 }
-
-
-
-
 
 // POST /achievements/:id/reject
 func (s *AchievementService) Reject(c *fiber.Ctx) error {

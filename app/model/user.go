@@ -26,6 +26,24 @@ type User struct {
 	Department *string     `json:"department"`
 }
 
+type CreateUserRequest struct {
+	Username string `json:"username" validate:"required"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=6"`
+	FullName string `json:"fullName" validate:"required"`
+	RoleID   string `json:"roleId" validate:"required"`
+
+	// Mahasiswa
+	StudentID     *string `json:"studentId,omitempty"`
+	ProgramStudy *string `json:"programStudy,omitempty"`
+	AcademicYear *string `json:"academicYear,omitempty"`
+	AdvisorID    *string `json:"advisorId,omitempty"`
+
+	// Dosen
+	LecturerID *string `json:"lecturerId,omitempty"`
+	Department *string `json:"department,omitempty"`
+}
+
 type UpdateUserRequest struct {
     Username      *string `json:"username"`
     Email         *string `json:"email"`
@@ -42,6 +60,10 @@ type UpdateUserRequest struct {
     // Dosen
     LecturerID *string `json:"lecturer_id"`
     Department *string `json:"department"`
+}
+
+type AssignRoleRequest struct {
+	RoleID string `json:"roleId" validate:"required"`
 }
 
 

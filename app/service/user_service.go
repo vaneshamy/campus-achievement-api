@@ -3,9 +3,7 @@ package service
 import (
 	"go-fiber/app/model"
 	"go-fiber/app/repository"
-	"go-fiber/helper"
 
-	"github.com/google/uuid"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -14,7 +12,6 @@ type UserService struct {
 	studentRepo  *repository.StudentRepository
 	lecturerRepo *repository.LecturerRepository
 }
-
 
 func NewUserService(
 	userRepo *repository.UserRepository,
@@ -28,93 +25,100 @@ func NewUserService(
 	}
 }
 
+// ==================== GET ALL USERS ====================
 func (s *UserService) GetAllUsers(c *fiber.Ctx) error {
 	users, err := s.userRepo.FindAll()
 	if err != nil {
-		return c.Status(500).JSON(model.ErrorResponse("failed to fetch users", err.Error()))
+		return c.Status(500).JSON(
+			model.ErrorResponse("failed to fetch users", err.Error()),
+		)
 	}
 	return c.JSON(model.SuccessResponse(users))
 }
 
+// ==================== GET USER BY ID ====================
 func (s *UserService) GetUserByID(c *fiber.Ctx) error {
 	id := c.Params("id")
+
 	user, err := s.userRepo.FindByID(id)
 	if err != nil {
-		return c.Status(404).JSON(model.ErrorResponse("user not found", nil))
+		return c.Status(404).JSON(
+			model.ErrorResponse("user not found", nil),
+		)
 	}
+
 	return c.JSON(model.SuccessResponse(user))
 }
 
+// ==================== CREATE USER ====================
 func (s *UserService) CreateUser(c *fiber.Ctx) error {
-	var req model.User
+	var req model.CreateUserRequest
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(model.ErrorResponse("invalid body", err.Error()))
-	}
-
-	req.ID = uuid.New().String()
-
-	if req.PasswordHash != "" {
-		hashed, err := helper.HashPassword(req.PasswordHash)
-		if err != nil {
-			return c.Status(500).JSON(model.ErrorResponse("failed to hash password", err.Error()))
-		}
-		req.PasswordHash = hashed
+		return c.Status(400).JSON(
+			model.ErrorResponse("invalid request body", err.Error()),
+		)
 	}
 
 	if err := s.userRepo.Create(&req); err != nil {
-		return c.Status(500).JSON(model.ErrorResponse("failed to create user", err.Error()))
+		return c.Status(500).JSON(
+			model.ErrorResponse("failed to create user", err.Error()),
+		)
 	}
 
-	return c.JSON(model.SuccessResponse(fiber.Map{
-		"message": "User created successfully",
-		"id":      req.ID,
-	}))
+	return c.Status(201).JSON(
+		model.SuccessResponse("User created successfully"),
+	)
 }
 
+// ==================== UPDATE USER ====================
 func (s *UserService) UpdateUser(c *fiber.Ctx) error {
-    id := c.Params("id")
+	id := c.Params("id")
 
-    var req model.UpdateUserRequest
-    if err := c.BodyParser(&req); err != nil {
-        return c.Status(400).JSON(model.ErrorResponse("invalid body", err.Error()))
-    }
+	var req model.UpdateUserRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(
+			model.ErrorResponse("invalid request body", err.Error()),
+		)
+	}
 
-    if err := s.userRepo.UpdatePartial(id, &req); err != nil {
-        return c.Status(500).JSON(model.ErrorResponse("failed to update user", err.Error()))
-    }
+	if err := s.userRepo.UpdatePartial(id, &req); err != nil {
+		return c.Status(500).JSON(
+			model.ErrorResponse("failed to update user", err.Error()),
+		)
+	}
 
-    return c.JSON(model.SuccessResponse("User updated successfully"))
+	return c.JSON(model.SuccessResponse("User updated successfully"))
 }
 
-
+// ==================== DELETE USER ====================
 func (s *UserService) DeleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	if err := s.userRepo.Delete(id); err != nil {
-		return c.Status(500).JSON(model.ErrorResponse("failed to delete user", err.Error()))
+		return c.Status(500).JSON(
+			model.ErrorResponse("failed to delete user", err.Error()),
+		)
 	}
 
 	return c.JSON(model.SuccessResponse("User deleted successfully"))
 }
 
+// ==================== ASSIGN ROLE ====================
 func (s *UserService) AssignRole(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	var body struct {
-		RoleID string `json:"roleId"`
+	var req model.AssignRoleRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(
+			model.ErrorResponse("invalid request body", err.Error()),
+		)
 	}
 
-	if err := c.BodyParser(&body); err != nil {
-		return c.Status(400).JSON(model.ErrorResponse("invalid body", err.Error()))
-	}
-
-	if body.RoleID == "" {
-		return c.Status(400).JSON(model.ErrorResponse("roleId is required", nil))
-	}
-
-	if err := s.userRepo.SetUserRole(id, body.RoleID); err != nil {
-		return c.Status(500).JSON(model.ErrorResponse("failed to update role", err.Error()))
+	if err := s.userRepo.AssignRole(id, &req); err != nil {
+		return c.Status(500).JSON(
+			model.ErrorResponse("failed to assign role", err.Error()),
+		)
 	}
 
 	return c.JSON(model.SuccessResponse("Role updated successfully"))

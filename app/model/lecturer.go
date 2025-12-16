@@ -9,3 +9,9 @@ type Lecturer struct {
 	Department string    `json:"department"`
 	CreatedAt  time.Time `json:"createdAt"`
 }
+
+type CreateLecturerRequest struct {
+	UserID     string `json:"userId"`
+	LecturerID string `json:"lecturerId"`
+	Department string `json:"department"`
+}

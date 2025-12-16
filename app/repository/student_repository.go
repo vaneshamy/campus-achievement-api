@@ -13,29 +13,26 @@ func NewStudentRepository(db *sql.DB) *StudentRepository {
 	return &StudentRepository{db}
 }
 
-func (r *StudentRepository) CreateStudent(s *model.Student) error {
+func (r *StudentRepository) CreateStudent(req *model.CreateStudentRequest) error {
+	var advisor interface{}
+	if req.AdvisorID == nil || *req.AdvisorID == "" {
+		advisor = nil
+	} else {
+		advisor = *req.AdvisorID
+	}
 
-    var advisor interface{}
-    if s.AdvisorID == nil || *s.AdvisorID == "" {
-        advisor = nil 
-    } else {
-        advisor = s.AdvisorID
-    }
+	_, err := r.db.Exec(`
+		INSERT INTO students (id, user_id, student_id, program_study, academic_year, advisor_id)
+		VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
+	`,
+		req.UserID,
+		req.StudentID,
+		req.ProgramStudy,
+		req.AcademicYear,
+		advisor,
+	)
 
-    query := `
-        INSERT INTO students (id, user_id, student_id, program_study, academic_year, advisor_id)
-        VALUES ($1, $2, $3, $4, $5, $6)
-    `
-    _, err := r.db.Exec(
-        query,
-        s.ID,
-        s.UserID,
-        s.StudentID,
-        s.ProgramStudy,
-        s.AcademicYear,
-        advisor,
-    )
-    return err
+	return err
 }
 
 // GET ALL STUDENTS
@@ -81,12 +78,14 @@ func (r *StudentRepository) FindByID(id string) (*model.Student, error) {
 
 
 // UPDATE ADVISOR
-func (r *StudentRepository) UpdateAdvisor(studentID, advisorID string) error {
+func (r *StudentRepository) UpdateAdvisor(studentID string, advisorID string) error {
 	_, err := r.db.Exec(`
-        UPDATE students SET advisor_id = $1 WHERE id = $2
-    `, advisorID, studentID)
+		UPDATE students SET advisor_id = $1 WHERE id = $2
+	`, advisorID, studentID)
+
 	return err
 }
+
 
 // GET STUDENT BY USER ID
 func (r *StudentRepository) FindByUserID(userID string) (*model.Student, error) {
