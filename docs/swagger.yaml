@@ -16,6 +16,24 @@ definitions:
     required:
     - roleId
     type: object
+  model.CreateAchievementRequest:
+    properties:
+      achievementType:
+        type: string
+      description:
+        type: string
+      details:
+        additionalProperties: true
+        type: object
+      points:
+        type: integer
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    type: object
   model.CreateUserRequest:
     properties:
       academicYear:
@@ -82,6 +100,11 @@ definitions:
       user:
         $ref: '#/definitions/model.UserResponse'
     type: object
+  model.RejectAchievementRequest:
+    properties:
+      note:
+        type: string
+    type: object
   model.Student:
     properties:
       academicYear:
@@ -97,6 +120,20 @@ definitions:
       studentId:
         type: string
       userId:
+        type: string
+    type: object
+  model.UpdateAchievementRequest:
+    properties:
+      description:
+        type: string
+      details:
+        additionalProperties: true
+        type: object
+      tags:
+        items:
+          type: string
+        type: array
+      title:
         type: string
     type: object
   model.UpdateAdvisorRequest:
@@ -187,6 +224,212 @@ info:
   title: Prestasi Backend API
   version: "1.0"
 paths:
+  /achievements:
+    get:
+      description: List prestasi sesuai role user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: List achievements
+      tags:
+      - Achievements
+    post:
+      consumes:
+      - application/json
+      description: Mahasiswa membuat prestasi baru
+      parameters:
+      - description: Create achievement request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateAchievementRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Create achievement
+      tags:
+      - Achievements
+  /achievements/{id}:
+    delete:
+      description: Hapus prestasi (draft only)
+      parameters:
+      - description: Achievement Reference ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete achievement
+      tags:
+      - Achievements
+    put:
+      consumes:
+      - application/json
+      description: Update data prestasi (draft only)
+      parameters:
+      - description: Achievement Reference ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateAchievementRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Update achievement
+      tags:
+      - Achievements
+  /achievements/{id}/attachments:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload file pendukung prestasi
+      parameters:
+      - description: Achievement Reference ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Attachment file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload achievement attachment
+      tags:
+      - Achievements
+  /achievements/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      description: Tolak prestasi dengan catatan
+      parameters:
+      - description: Achievement Reference ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reject request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.RejectAchievementRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Reject achievement
+      tags:
+      - Achievements
+  /achievements/{id}/submit:
+    post:
+      description: Kirim prestasi untuk diverifikasi
+      parameters:
+      - description: Achievement Reference ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Submit achievement
+      tags:
+      - Achievements
+  /achievements/{id}/verify:
+    post:
+      description: Verifikasi prestasi (Dosen/Admin)
+      parameters:
+      - description: Achievement Reference ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Verify achievement
+      tags:
+      - Achievements
   /auth/login:
     post:
       consumes:

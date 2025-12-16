@@ -35,6 +35,19 @@ func NewAchievementService(
 }
 
 // POST /achievements
+
+// CreateAchievement godoc
+// @Summary Create achievement
+// @Description Mahasiswa membuat prestasi baru
+// @Tags Achievements
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param body body model.CreateAchievementRequest true "Create achievement request"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 401 {object} model.APIResponse
+// @Router /achievements [post]
 func (s *AchievementService) Create(c *fiber.Ctx) error {
 	// 1. Gunakan Struct Request Khusus
 	var req model.CreateAchievementRequest
@@ -95,6 +108,7 @@ func (s *AchievementService) Create(c *fiber.Ctx) error {
 
 
 // GET /achievements
+
 func (s *AchievementService) GetAll(c *fiber.Ctx) error {
 	// Gunakan struct filter jika ingin lebih rapi (opsional)
 	filter := new(model.FilterAchievementRequest)
@@ -165,6 +179,19 @@ func (s *AchievementService) GetByID(c *fiber.Ctx) error {
 
 
 // PUT /achievements/:id
+
+// UpdateAchievement godoc
+// @Summary Update achievement
+// @Description Update data prestasi (draft only)
+// @Tags Achievements
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Achievement Reference ID"
+// @Param body body model.UpdateAchievementRequest true "Update request"
+// @Success 200 {object} model.APIResponse
+// @Failure 403 {object} model.APIResponse
+// @Router /achievements/{id} [put]
 func (s *AchievementService) Update(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -204,6 +231,18 @@ func (s *AchievementService) Update(c *fiber.Ctx) error {
 }
 
 // POST /achievements/:id/reject
+
+// RejectAchievement godoc
+// @Summary Reject achievement
+// @Description Tolak prestasi dengan catatan
+// @Tags Achievements
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Achievement Reference ID"
+// @Param body body model.RejectAchievementRequest true "Reject request"
+// @Success 200 {object} model.APIResponse
+// @Router /achievements/{id}/reject [post]
 func (s *AchievementService) Reject(c *fiber.Ctx) error {
     id := c.Params("id")
 
@@ -234,6 +273,17 @@ func (s *AchievementService) Reject(c *fiber.Ctx) error {
 }
 
 // DELETE /achievements/:id
+
+// DeleteAchievement godoc
+// @Summary Delete achievement
+// @Description Hapus prestasi (draft only)
+// @Tags Achievements
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Achievement Reference ID"
+// @Success 200 {object} model.APIResponse
+// @Failure 403 {object} model.APIResponse
+// @Router /achievements/{id} [delete]
 func (s *AchievementService) Delete(c *fiber.Ctx) error {
     id := c.Params("id")
 
@@ -276,6 +326,16 @@ func (s *AchievementService) Delete(c *fiber.Ctx) error {
 }
 
 // POST /achievements/:id/submit
+
+// SubmitAchievement godoc
+// @Summary Submit achievement
+// @Description Kirim prestasi untuk diverifikasi
+// @Tags Achievements
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Achievement Reference ID"
+// @Success 200 {object} model.APIResponse
+// @Router /achievements/{id}/submit [post]
 func (s *AchievementService) Submit(c *fiber.Ctx) error {
     id := c.Params("id")
     ref, err := s.postgresRepo.FindReferenceByID(id)
@@ -295,6 +355,16 @@ func (s *AchievementService) Submit(c *fiber.Ctx) error {
 }
 
 // POST /achievements/:id/verify
+
+// VerifyAchievement godoc
+// @Summary Verify achievement
+// @Description Verifikasi prestasi (Dosen/Admin)
+// @Tags Achievements
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Achievement Reference ID"
+// @Success 200 {object} model.APIResponse
+// @Router /achievements/{id}/verify [post]
 func (s *AchievementService) Verify(c *fiber.Ctx) error {
     id := c.Params("id")
     claims, _ := c.Locals("user").(*model.JWTClaims)
@@ -316,6 +386,15 @@ func (s *AchievementService) Verify(c *fiber.Ctx) error {
     return c.JSON(model.SuccessResponse("achievement verified"))
 }
 
+// ListAchievements godoc
+// @Summary List achievements
+// @Description List prestasi sesuai role user
+// @Tags Achievements
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} model.APIResponse
+// @Failure 401 {object} model.APIResponse
+// @Router /achievements [get]
 func (s *AchievementService) List(c *fiber.Ctx) error {
     claims := c.Locals("user").(*model.JWTClaims)
     if claims.Role == "Mahasiswa" {
@@ -390,6 +469,17 @@ func (s *AchievementService) History(c *fiber.Ctx) error {
     }))
 }
 
+// UploadAchievementAttachment godoc
+// @Summary Upload achievement attachment
+// @Description Upload file pendukung prestasi
+// @Tags Achievements
+// @Security BearerAuth
+// @Accept multipart/form-data
+// @Produce json
+// @Param id path string true "Achievement Reference ID"
+// @Param file formData file true "Attachment file"
+// @Success 200 {object} model.APIResponse
+// @Router /achievements/{id}/attachments [post]
 func (s *AchievementService) UploadAttachment(c *fiber.Ctx) error {
     id := c.Params("id")
     ref, err := s.postgresRepo.FindReferenceByID(id)

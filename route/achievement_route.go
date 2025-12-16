@@ -1,3 +1,5 @@
+// @tag.name Achievements
+// @tag.description Manajemen prestasi mahasiswa
 package route
 
 import (
