@@ -1,3 +1,5 @@
+// @tag.name Students
+// @tag.description Manajemen data mahasiswa
 package route
 
 import (
