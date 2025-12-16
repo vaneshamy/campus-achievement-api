@@ -27,6 +27,7 @@ func NewApp(db *sql.DB) *fiber.App {
 	app.Use(middleware.LoggerMiddleware())
 
 	// PostgreSQL repositories
+	authRepo := repository.NewAuthRepository(db)
 	userRepo := repository.NewUserRepository(db)
 	studentRepo := repository.NewStudentRepository(db)
 	lecturerRepo := repository.NewLecturerRepository(db)
@@ -47,7 +48,7 @@ func NewApp(db *sql.DB) *fiber.App {
 
 
 	// service
-	authService := service.NewAuthService(userRepo)
+	authService := service.NewAuthService(authRepo)
 	userService := service.NewUserService(userRepo, studentRepo, lecturerRepo)
 	studentService := service.NewStudentService(studentRepo)
 	lecturerService := service.NewLecturerService(lecturerRepo)
