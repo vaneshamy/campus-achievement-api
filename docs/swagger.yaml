@@ -592,6 +592,62 @@ paths:
       summary: Get lecturer advisees
       tags:
       - Lecturers
+  /reports/statistics:
+    get:
+      description: Statistik prestasi berdasarkan role (Mahasiswa, Dosen Wali, Admin)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get achievement statistics
+      tags:
+      - Reports
+  /reports/student/{id}:
+    get:
+      description: Statistik prestasi untuk mahasiswa tertentu
+      parameters:
+      - description: Student ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get student achievement statistics
+      tags:
+      - Reports
   /students:
     get:
       description: Mengambil seluruh data mahasiswa

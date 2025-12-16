@@ -1,3 +1,5 @@
+// @tag.name Reports
+// @tag.description Laporan dan statistik prestasi mahasiswa
 package route
 
 import (

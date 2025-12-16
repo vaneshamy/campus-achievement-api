@@ -27,6 +27,16 @@ func NewReportService(
 	}
 }
 
+// GetStatistics godoc
+// @Summary Get achievement statistics
+// @Description Statistik prestasi berdasarkan role (Mahasiswa, Dosen Wali, Admin)
+// @Tags Reports
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} model.APIResponse
+// @Failure 401 {object} model.APIResponse
+// @Failure 403 {object} model.APIResponse
+// @Router /reports/statistics [get]
 func (s *ReportService) Statistics(c *fiber.Ctx) error {
 	claims, ok := c.Locals("user").(*model.JWTClaims)
 	if !ok {
@@ -100,6 +110,18 @@ func (s *ReportService) Statistics(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(model.SuccessResponse(resp))
 }
 
+// GetStudentStatistics godoc
+// @Summary Get student achievement statistics
+// @Description Statistik prestasi untuk mahasiswa tertentu
+// @Tags Reports
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Student ID"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 403 {object} model.APIResponse
+// @Failure 404 {object} model.APIResponse
+// @Router /reports/student/{id} [get]
 func (s *ReportService) StudentStatistics(c *fiber.Ctx) error {
 	claims, ok := c.Locals("user").(*model.JWTClaims)
 	if !ok {
