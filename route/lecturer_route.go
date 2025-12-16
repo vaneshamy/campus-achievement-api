@@ -1,3 +1,5 @@
+// @tag.name Lecturers
+// @tag.description Manajemen dosen dan mahasiswa bimbingan
 package route
 
 import (

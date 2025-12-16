@@ -14,6 +14,16 @@ func NewLecturerService(lecturerRepo *repository.LecturerRepository) *LecturerSe
 	return &LecturerService{lecturerRepo}
 }
 
+// GetLecturers godoc
+// @Summary Get all lecturers
+// @Description Mengambil seluruh data dosen
+// @Tags Lecturers
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} model.APIResponse{data=[]model.Lecturer}
+// @Failure 401 {object} model.APIResponse
+// @Failure 403 {object} model.APIResponse
+// @Router /lecturers [get]
 func (s *LecturerService) GetLecturers(c *fiber.Ctx) error {
 	data, err := s.lecturerRepo.FindAll()
 	if err != nil {
@@ -22,6 +32,18 @@ func (s *LecturerService) GetLecturers(c *fiber.Ctx) error {
 	return c.JSON(model.SuccessResponse(data))
 }
 
+// GetAdvisees godoc
+// @Summary Get lecturer advisees
+// @Description Mengambil daftar mahasiswa bimbingan dosen
+// @Tags Lecturers
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Lecturer ID"
+// @Success 200 {object} model.APIResponse{data=[]model.Student}
+// @Failure 404 {object} model.APIResponse
+// @Failure 401 {object} model.APIResponse
+// @Failure 403 {object} model.APIResponse
+// @Router /lecturers/{id}/advisees [get]
 func (s *LecturerService) GetAdvisees(c *fiber.Ctx) error {
 	lecturerID := c.Params("id")
 

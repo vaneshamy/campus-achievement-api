@@ -50,6 +50,19 @@ definitions:
     - roleId
     - username
     type: object
+  model.Lecturer:
+    properties:
+      createdAt:
+        type: string
+      department:
+        type: string
+      id:
+        type: string
+      lecturerId:
+        type: string
+      userId:
+        type: string
+    type: object
   model.LoginRequest:
     properties:
       password:
@@ -266,6 +279,76 @@ paths:
       summary: Refresh access token
       tags:
       - Auth
+  /lecturers:
+    get:
+      description: Mengambil seluruh data dosen
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Lecturer'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all lecturers
+      tags:
+      - Lecturers
+  /lecturers/{id}/advisees:
+    get:
+      description: Mengambil daftar mahasiswa bimbingan dosen
+      parameters:
+      - description: Lecturer ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Student'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get lecturer advisees
+      tags:
+      - Lecturers
   /students:
     get:
       description: Mengambil seluruh data mahasiswa
